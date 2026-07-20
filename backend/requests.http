@@ -1,0 +1,25 @@
+### Create Problem
+
+POST http://localhost:8080/problems
+Content-Type: application/json
+
+{
+  "title": "Binary Search",
+  "difficulty": "Easy",
+  "algorithm": "Binary Search",
+  "solved": false,
+  "notes": "Review left and right limits",
+  "url": "https://leetcode.com/problems/binary-search/"
+}
+
+###
+
+### Get Problems
+
+GET http://localhost:8080/problems
+
+###
+
+### Health
+
+GET http://localhost:8080/health

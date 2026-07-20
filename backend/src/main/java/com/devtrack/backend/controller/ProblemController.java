@@ -1,7 +1,8 @@
 package com.devtrack.backend.controller;
 
 
-import com.devtrack.backend.model.Problem;
+import com.devtrack.backend.dto.CreateProblemRequest;
+import com.devtrack.backend.dto.ProblemResponse;
 import com.devtrack.backend.service.ProblemService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -20,13 +21,13 @@ public class ProblemController {
     }
 
     @GetMapping("/problems")
-    public List<Problem> getProblems() {
+    public List<ProblemResponse> getProblems() {
         return problemService.getAllProblems();
     }
 
     @PostMapping("/problems")
-    public Problem createProblem(@RequestBody Problem problem) {
-        return problemService.createProblem(problem);
+    public ProblemResponse createProblem(@RequestBody CreateProblemRequest request) {
+        return problemService.createProblem(request);
     }
 
 }
