@@ -1,5 +1,7 @@
 package com.devtrack.backend.service;
 
+import com.devtrack.backend.dto.CreateProblemRequest;
+import com.devtrack.backend.dto.ProblemResponse;
 import com.devtrack.backend.model.Problem;
 import org.springframework.stereotype.Service;
 
@@ -11,18 +13,38 @@ public class ProblemService {
 
     private final List<Problem> problems = new ArrayList<>();
 
-    public ProblemService() {
-        problems.add(new Problem("Two Sum"));
-        problems.add(new Problem("Two Sum2"));
+    public List<ProblemResponse> getAllProblems() {
+        List<ProblemResponse> problemResponses = new ArrayList<>();
+        for (Problem problem : problems) {
+            problemResponses.add(toProblemResponse(problem));
+        }
+        return problemResponses;
     }
 
-    public List<Problem> getAllProblems() {
-        return problems;
-    }
+    public ProblemResponse createProblem(CreateProblemRequest request) {
 
-    public Problem createProblem(Problem problem) {
+        Problem problem = new Problem(
+                request.getTitle(),
+                request.getDifficulty(),
+                request.getAlgorithm(),
+                request.isSolved(),
+                request.getNotes(),
+                request.getUrl());
+
         problems.add(problem);
-        return problem;
+
+        return toProblemResponse(problem);
     }
 
+    private ProblemResponse toProblemResponse(Problem problem) {
+        return new ProblemResponse(
+                problem.getId(),
+                problem.getTitle(),
+                problem.getDifficulty(),
+                problem.getAlgorithm(),
+                problem.isSolved(),
+                problem.getNotes(),
+                problem.getUrl()
+        );
+    }
 }

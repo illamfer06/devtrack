@@ -40,6 +40,24 @@ public class Problem {
         this.url = url;
     }
 
+    public Problem(
+            String title,
+            String difficulty,
+            String algorithm,
+            boolean solved,
+            String notes,
+            String url) {
+
+        validateTitle(title);
+
+        this.title = title;
+        this.difficulty = difficulty;
+        this.algorithm = algorithm;
+        this.solved = solved;
+        this.notes = notes;
+        this.url = url;
+    }
+
     public Long getId() {
         return this.id;
     }
