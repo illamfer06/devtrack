@@ -37,9 +37,7 @@ public class ProblemResponse {
     public String getDifficulty() {
         return difficulty;
     }
-    public String getAlgorithm() {
-        return algorithm;
-    }
+    public String getAlgorithm() {return algorithm;}
     public boolean isSolved() {
         return solved;
     }
