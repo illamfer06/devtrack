@@ -1,3 +1,5 @@
+###
+
 ### Create Problem
 
 POST http://localhost:8080/problems
@@ -12,6 +14,21 @@ Content-Type: application/json
   "url": "https://leetcode.com/problems/binary-search/"
 }
 
+###
+
+### Create problem - Empty title (400 Bad Request)
+
+POST http://localhost:8080/problems
+Content-Type: application/json
+
+{
+  "title": "",
+  "difficulty": "Easy",
+  "algorithm": "Hash Map",
+  "solved": false,
+  "notes": "Testing global exception handler",
+  "url": "https://leetcode.com/problems/two-sum/"
+}
 ###
 
 ### Get Problems
