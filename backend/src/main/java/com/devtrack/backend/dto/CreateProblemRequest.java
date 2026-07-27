@@ -1,7 +1,10 @@
 package com.devtrack.backend.dto;
 
+import jakarta.validation.constraints.NotBlank;
+
 public class CreateProblemRequest {
 
+    @NotBlank(message = "Title cannot be empty")
     private String title;
     private String difficulty;
     private String algorithm;

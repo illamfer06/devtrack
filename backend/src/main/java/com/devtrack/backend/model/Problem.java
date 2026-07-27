@@ -20,8 +20,6 @@ public class Problem {
 
     public Problem(String title) {
 
-        validateTitle(title);
-
         this.title = title;
         this.solved = false;
     }
@@ -34,8 +32,6 @@ public class Problem {
             boolean solved,
             String notes,
             String url) {
-
-        validateTitle(title);
 
         this.id = id;
         this.title = title;
@@ -53,8 +49,6 @@ public class Problem {
             boolean solved,
             String notes,
             String url) {
-
-        validateTitle(title);
 
         this.title = title;
         this.difficulty = difficulty;
@@ -86,12 +80,7 @@ public class Problem {
         return this.url;
     }
 
-    public void setTitle(String title) {
-
-        validateTitle(title);
-
-        this.title = title;
-    }
+    public void setTitle(String title) {this.title = title;}
     public void setDifficulty(String difficulty) {
         this.difficulty = difficulty;
     }
@@ -106,11 +95,5 @@ public class Problem {
     }
     public void setUrl(String url) {
         this.url = url;
-    }
-
-    private void validateTitle(String title) {
-        if (title == null ||title.isBlank()) {
-            throw new IllegalArgumentException("Title cannot be empty");
-        }
     }
 }
