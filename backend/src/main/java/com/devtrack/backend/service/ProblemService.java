@@ -5,6 +5,7 @@ import com.devtrack.backend.dto.ProblemResponse;
 import com.devtrack.backend.exception.ProblemNotFoundException;
 import com.devtrack.backend.model.Problem;
 import com.devtrack.backend.repository.ProblemRepository;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -21,7 +22,7 @@ public class ProblemService {
     }
 
     public List<ProblemResponse> getAllProblems() {
-        List<Problem> problems = problemRepository.findAll();
+        List<Problem> problems = problemRepository.findAll(Sort.by("id"));
         List<ProblemResponse> problemResponses = new ArrayList<>();
 
         for (Problem problem : problems) {
@@ -62,6 +63,27 @@ public class ProblemService {
         Optional<Problem> optionalProblem = problemRepository.findById(id);
         if (optionalProblem.isPresent()) {
             return toProblemResponse(optionalProblem.get());
+        } else {
+            throw new ProblemNotFoundException("Problem with id " + id + " was not found");
+        }
+    }
+
+    public ProblemResponse updateProblem(Long id, CreateProblemRequest request) {
+        Optional<Problem> optionalProblem = problemRepository.findById(id);
+
+        if (optionalProblem.isPresent()) {
+            Problem problem = optionalProblem.get();
+            problem.setTitle(request.getTitle());
+            problem.setDifficulty(request.getDifficulty());
+            problem.setAlgorithm(request.getAlgorithm());
+            problem.setSolved(request.isSolved());
+            problem.setNotes(request.getNotes());
+            problem.setUrl(request.getUrl());
+
+            Problem updatedProblem = problemRepository.save(problem);
+
+            return toProblemResponse(updatedProblem);
+
         } else {
             throw new ProblemNotFoundException("Problem with id " + id + " was not found");
         }

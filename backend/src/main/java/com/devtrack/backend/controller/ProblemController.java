@@ -32,4 +32,9 @@ public class ProblemController {
     public ProblemResponse getProblemById(@PathVariable Long id) {
         return problemService.getProblemById(id);
     }
+
+    @PutMapping("/problems/{id}")
+    public ProblemResponse updateProblem(@PathVariable Long id, @Valid @RequestBody CreateProblemRequest request) {
+        return problemService.updateProblem(id, request);
+    }
 }

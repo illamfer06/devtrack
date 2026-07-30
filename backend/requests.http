@@ -49,6 +49,40 @@ GET http://localhost:8080/problems/99999
 
 ###
 
+### Update problem
+
+PUT http://localhost:8080/problems/2
+Content-Type: application/json
+Accept: application/json
+
+{
+  "title": "Longest Substring Without Repeating Characters",
+  "difficulty": "MEDIUM",
+  "algorithm": "SLIDING_WINDOW",
+  "solved": true,
+  "notes": "Solved using a sliding window with a HashSet.",
+  "url": "https://leetcode.com/problems/longest-substring-without-repeating-characters/"
+}
+
+###
+
+### Update non-existing problem
+
+PUT http://localhost:8080/problems/99999
+Content-Type: application/json
+Accept: application/json
+
+{
+  "title": "Test",
+  "difficulty": "EASY",
+  "algorithm": "ARRAY",
+  "solved": false,
+  "notes": "Test",
+  "url": "https://example.com"
+}
+
+###
+
 ### Health
 
 GET http://localhost:8080/health
