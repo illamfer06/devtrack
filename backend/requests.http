@@ -37,6 +37,18 @@ GET http://localhost:8080/problems
 
 ###
 
+### Get Problem by id (exists)
+
+GET http://localhost:8080/problems/1
+
+###
+
+### Get Problem by id (not found)
+
+GET http://localhost:8080/problems/99999
+
+###
+
 ### Health
 
 GET http://localhost:8080/health

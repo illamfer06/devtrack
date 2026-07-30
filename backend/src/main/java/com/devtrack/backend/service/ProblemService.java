@@ -2,12 +2,14 @@ package com.devtrack.backend.service;
 
 import com.devtrack.backend.dto.CreateProblemRequest;
 import com.devtrack.backend.dto.ProblemResponse;
+import com.devtrack.backend.exception.ProblemNotFoundException;
 import com.devtrack.backend.model.Problem;
 import com.devtrack.backend.repository.ProblemRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class ProblemService {
@@ -54,5 +56,14 @@ public class ProblemService {
                 problem.getNotes(),
                 problem.getUrl()
         );
+    }
+
+    public ProblemResponse getProblemById(Long id) {
+        Optional<Problem> optionalProblem = problemRepository.findById(id);
+        if (optionalProblem.isPresent()) {
+            return toProblemResponse(optionalProblem.get());
+        } else {
+            throw new ProblemNotFoundException("Problem with id " + id + " was not found");
+        }
     }
 }
