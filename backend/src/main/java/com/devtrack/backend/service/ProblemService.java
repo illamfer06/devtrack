@@ -88,4 +88,15 @@ public class ProblemService {
             throw new ProblemNotFoundException("Problem with id " + id + " was not found");
         }
     }
+
+    public void deleteProblem(Long id) {
+        Optional<Problem> optionalProblem = problemRepository.findById(id);
+
+        if (optionalProblem.isPresent()) {
+            problemRepository.delete(optionalProblem.get());
+
+        } else {
+            throw new ProblemNotFoundException("Problem with id " + id + " was not found");
+        }
+    }
 }

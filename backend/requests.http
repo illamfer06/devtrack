@@ -39,7 +39,7 @@ GET http://localhost:8080/problems
 
 ### Get Problem by id (exists)
 
-GET http://localhost:8080/problems/1
+GET http://localhost:8080/problems/2
 
 ###
 
@@ -86,3 +86,20 @@ Accept: application/json
 ### Health
 
 GET http://localhost:8080/health
+
+###
+
+### Delete existing problem
+
+DELETE http://localhost:8080/problems/2
+Accept: application/json
+
+###
+
+### Delete non-existing problem
+
+DELETE http://localhost:8080/problems/99999
+Accept: application/json
+
+
+
