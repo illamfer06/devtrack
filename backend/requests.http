@@ -1,5 +1,11 @@
 ###
 
+### Health
+
+GET http://localhost:8080/health
+
+###
+
 ### Create Problem
 
 POST http://localhost:8080/problems
@@ -39,7 +45,7 @@ GET http://localhost:8080/problems
 
 ### Get Problem by id (exists)
 
-GET http://localhost:8080/problems/2
+GET http://localhost:8080/problems/1
 
 ###
 
@@ -51,7 +57,7 @@ GET http://localhost:8080/problems/99999
 
 ### Update problem
 
-PUT http://localhost:8080/problems/2
+PUT http://localhost:8080/problems/1
 Content-Type: application/json
 Accept: application/json
 
@@ -80,12 +86,6 @@ Accept: application/json
   "notes": "Test",
   "url": "https://example.com"
 }
-
-###
-
-### Health
-
-GET http://localhost:8080/health
 
 ###
 

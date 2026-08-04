@@ -2,6 +2,7 @@ package com.devtrack.backend.service;
 
 import com.devtrack.backend.dto.CreateProblemRequest;
 import com.devtrack.backend.dto.ProblemResponse;
+import com.devtrack.backend.dto.UpdateProblemRequest;
 import com.devtrack.backend.exception.ProblemNotFoundException;
 import com.devtrack.backend.model.Problem;
 import com.devtrack.backend.repository.ProblemRepository;
@@ -53,7 +54,7 @@ public class ProblemService {
         return toProblemResponse(problem);
     }
 
-    public ProblemResponse updateProblem(Long id, CreateProblemRequest request) {
+    public ProblemResponse updateProblem(Long id, UpdateProblemRequest request) {
         Problem problem = findProblemById(id);
 
         problem.setTitle(request.getTitle());

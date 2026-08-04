@@ -3,6 +3,7 @@ package com.devtrack.backend.controller;
 
 import com.devtrack.backend.dto.CreateProblemRequest;
 import com.devtrack.backend.dto.ProblemResponse;
+import com.devtrack.backend.dto.UpdateProblemRequest;
 import com.devtrack.backend.service.ProblemService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -31,7 +32,7 @@ public class ProblemController {
     public ProblemResponse createProblem(@Valid @RequestBody CreateProblemRequest request) { return problemService.createProblem(request); }
 
     @PutMapping("/problems/{id}")
-    public ProblemResponse updateProblem(@PathVariable Long id, @Valid @RequestBody CreateProblemRequest request) { return problemService.updateProblem(id, request); }
+    public ProblemResponse updateProblem(@PathVariable Long id, @Valid @RequestBody UpdateProblemRequest request) { return problemService.updateProblem(id, request); }
 
     @DeleteMapping("/problems/{id}")
     public ResponseEntity<Void> deleteProblem(@PathVariable Long id) {
