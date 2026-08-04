@@ -21,17 +21,6 @@ public class ProblemService {
         this.problemRepository = problemRepository;
     }
 
-    public List<ProblemResponse> getAllProblems() {
-        List<Problem> problems = problemRepository.findAll(Sort.by("id"));
-        List<ProblemResponse> problemResponses = new ArrayList<>();
-
-        for (Problem problem : problems) {
-            problemResponses.add(toProblemResponse(problem));
-        }
-
-        return problemResponses;
-    }
-
     public ProblemResponse createProblem(CreateProblemRequest request) {
 
         Problem problem = new Problem(
@@ -47,6 +36,48 @@ public class ProblemService {
         return toProblemResponse(savedProblem);
     }
 
+    public List<ProblemResponse> getAllProblems() {
+        List<Problem> problems = problemRepository.findAll(Sort.by("id"));
+        List<ProblemResponse> problemResponses = new ArrayList<>();
+
+        for (Problem problem : problems) {
+            problemResponses.add(toProblemResponse(problem));
+        }
+
+        return problemResponses;
+    }
+
+    public ProblemResponse getProblemById(Long id) {
+        Problem problem = findProblemById(id);
+
+        return toProblemResponse(problem);
+    }
+
+    public ProblemResponse updateProblem(Long id, CreateProblemRequest request) {
+        Problem problem = findProblemById(id);
+
+        problem.setTitle(request.getTitle());
+        problem.setDifficulty(request.getDifficulty());
+        problem.setAlgorithm(request.getAlgorithm());
+        problem.setSolved(request.isSolved());
+        problem.setNotes(request.getNotes());
+        problem.setUrl(request.getUrl());
+
+        Problem updatedProblem = problemRepository.save(problem);
+
+        return toProblemResponse(updatedProblem);
+    }
+
+    public void deleteProblem(Long id) {
+        Problem problem = findProblemById(id);
+
+        problemRepository.delete(problem);
+    }
+
+    private Problem findProblemById(Long id) {
+        return problemRepository.findById(id).orElseThrow(() -> new ProblemNotFoundException("Problem with id " + id + " was not found"));
+    }
+
     private ProblemResponse toProblemResponse(Problem problem) {
         return new ProblemResponse(
                 problem.getId(),
@@ -57,46 +88,5 @@ public class ProblemService {
                 problem.getNotes(),
                 problem.getUrl()
         );
-    }
-
-    public ProblemResponse getProblemById(Long id) {
-        Optional<Problem> optionalProblem = problemRepository.findById(id);
-        if (optionalProblem.isPresent()) {
-            return toProblemResponse(optionalProblem.get());
-        } else {
-            throw new ProblemNotFoundException("Problem with id " + id + " was not found");
-        }
-    }
-
-    public ProblemResponse updateProblem(Long id, CreateProblemRequest request) {
-        Optional<Problem> optionalProblem = problemRepository.findById(id);
-
-        if (optionalProblem.isPresent()) {
-            Problem problem = optionalProblem.get();
-            problem.setTitle(request.getTitle());
-            problem.setDifficulty(request.getDifficulty());
-            problem.setAlgorithm(request.getAlgorithm());
-            problem.setSolved(request.isSolved());
-            problem.setNotes(request.getNotes());
-            problem.setUrl(request.getUrl());
-
-            Problem updatedProblem = problemRepository.save(problem);
-
-            return toProblemResponse(updatedProblem);
-
-        } else {
-            throw new ProblemNotFoundException("Problem with id " + id + " was not found");
-        }
-    }
-
-    public void deleteProblem(Long id) {
-        Optional<Problem> optionalProblem = problemRepository.findById(id);
-
-        if (optionalProblem.isPresent()) {
-            problemRepository.delete(optionalProblem.get());
-
-        } else {
-            throw new ProblemNotFoundException("Problem with id " + id + " was not found");
-        }
     }
 }
