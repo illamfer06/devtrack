@@ -67,7 +67,7 @@ Accept: application/json
   "algorithm": "SLIDING_WINDOW",
   "solved": true,
   "notes": "Solved using a sliding window with a HashSet.",
-  "url": "https://leetcode.com/problems/longest-substring-without-repeating-characters/"
+  "url": "https://leetcode.com/problems/binary-search/"
 }
 
 ###
@@ -91,7 +91,7 @@ Accept: application/json
 
 ### Delete existing problem
 
-DELETE http://localhost:8080/problems/2
+DELETE http://localhost:8080/problems/6
 Accept: application/json
 
 ###

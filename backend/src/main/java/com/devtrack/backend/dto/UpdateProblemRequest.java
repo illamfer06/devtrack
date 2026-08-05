@@ -37,7 +37,7 @@ public class UpdateProblemRequest {
     public void setNotes(String notes) {
         this.notes = notes;
     }
-    public void setUrl(String notes) {
+    public void setUrl(String url) {
         this.url = url;
     }
 
