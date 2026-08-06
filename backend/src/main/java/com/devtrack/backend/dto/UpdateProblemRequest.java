@@ -22,24 +22,10 @@ public class UpdateProblemRequest {
     public String getNotes() { return notes;}
     public String getUrl() { return url;}
 
-    public void setTitle(String title) {
-        this.title = title;
-    }
-    public void setDifficulty(String difficulty) {
-        this.difficulty = difficulty;
-    }
-    public void setAlgorithm(String algorithm) {
-        this.algorithm = algorithm;
-    }
-    public void setSolved(boolean solved) {
-        this.solved = solved;
-    }
-    public void setNotes(String notes) {
-        this.notes = notes;
-    }
-    public void setUrl(String url) {
-        this.url = url;
-    }
-
-
+    public void setTitle(String title) { this.title = title;}
+    public void setDifficulty(String difficulty) { this.difficulty = difficulty;}
+    public void setAlgorithm(String algorithm) { this.algorithm = algorithm;}
+    public void setSolved(boolean solved) { this.solved = solved;}
+    public void setNotes(String notes) {this.notes = notes;}
+    public void setUrl(String url) { this.url = url;}
 }

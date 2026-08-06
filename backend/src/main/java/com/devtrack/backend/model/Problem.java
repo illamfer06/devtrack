@@ -18,12 +18,6 @@ public class Problem {
 
     public Problem(){}
 
-    public Problem(String title) {
-
-        this.title = title;
-        this.solved = false;
-    }
-
     public Problem(
             Long id,
             String title,

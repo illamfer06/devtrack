@@ -28,7 +28,5 @@ public class ErrorResponse {
     public String getMessage() {
         return message;
     }
-    public String getPath() {
-        return path;
-    }
+    public String getPath() { return path;}
 }
