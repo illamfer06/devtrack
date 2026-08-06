@@ -91,7 +91,7 @@ Accept: application/json
 
 ### Delete existing problem
 
-DELETE http://localhost:8080/problems/6
+DELETE http://localhost:8080/problems/8
 Accept: application/json
 
 ###

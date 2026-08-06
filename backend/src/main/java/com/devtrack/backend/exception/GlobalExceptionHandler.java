@@ -14,12 +14,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleIllegalArgumentException(IllegalArgumentException exception, HttpServletRequest request){
-        ErrorResponse errorResponse = new ErrorResponse(
-                HttpStatus.BAD_REQUEST.value(),
-                HttpStatus.BAD_REQUEST.getReasonPhrase(),
-                exception.getMessage(),
-                request.getRequestURI());
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+
+        return createErrorResponse(HttpStatus.BAD_REQUEST, exception.getMessage(), request);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -34,21 +30,22 @@ public class GlobalExceptionHandler {
             message.append(error.getDefaultMessage());
         }
 
-        ErrorResponse errorResponse = new ErrorResponse(
-                HttpStatus.BAD_REQUEST.value(),
-                HttpStatus.BAD_REQUEST.getReasonPhrase(),
-                message.toString(),
-                request.getRequestURI());
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+        return createErrorResponse(HttpStatus.BAD_REQUEST, message.toString(), request);
     }
 
     @ExceptionHandler(ProblemNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleProblemNotFoundException(ProblemNotFoundException exception, HttpServletRequest request) {
+
+        return createErrorResponse(HttpStatus.NOT_FOUND, exception.getMessage(), request);
+    }
+
+    private ResponseEntity<ErrorResponse> createErrorResponse(HttpStatus status, String message,  HttpServletRequest request) {
         ErrorResponse errorResponse = new ErrorResponse(
-                HttpStatus.NOT_FOUND.value(),
-                HttpStatus.NOT_FOUND.getReasonPhrase(),
-                exception.getMessage(),
+                status.value(),
+                status.getReasonPhrase(),
+                message,
                 request.getRequestURI());
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+
+        return ResponseEntity.status(status).body(errorResponse);
     }
 }
