@@ -10,6 +10,8 @@ GET http://localhost:8080/health
 
 POST http://localhost:8080/problems
 Content-Type: application/json
+Accept: application/json
+
 
 {
   "title": "Binary Search",
@@ -26,6 +28,8 @@ Content-Type: application/json
 
 POST http://localhost:8080/problems
 Content-Type: application/json
+Accept: application/json
+
 
 {
   "title": "",
@@ -92,14 +96,12 @@ Accept: application/json
 ### Delete existing problem
 
 DELETE http://localhost:8080/problems/8
-Accept: application/json
 
 ###
 
 ### Delete non-existing problem
 
 DELETE http://localhost:8080/problems/99999
-Accept: application/json
 
 
 

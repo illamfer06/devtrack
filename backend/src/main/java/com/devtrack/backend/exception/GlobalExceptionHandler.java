@@ -13,13 +13,18 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<ErrorResponse> handleIllegalArgumentException(IllegalArgumentException exception, HttpServletRequest request){
+    public ResponseEntity<ErrorResponse> handleIllegalArgumentException(
+            IllegalArgumentException exception,
+            HttpServletRequest request){
 
         return createErrorResponse(HttpStatus.BAD_REQUEST, exception.getMessage(), request);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ErrorResponse> handleValidationException(MethodArgumentNotValidException exception, HttpServletRequest request) {
+    public ResponseEntity<ErrorResponse> handleValidationException(
+            MethodArgumentNotValidException exception,
+            HttpServletRequest request) {
+
         StringBuilder message = new StringBuilder();
 
         for (ObjectError error : exception.getBindingResult().getAllErrors()) {
@@ -34,12 +39,18 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(ProblemNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleProblemNotFoundException(ProblemNotFoundException exception, HttpServletRequest request) {
+    public ResponseEntity<ErrorResponse> handleProblemNotFoundException(
+            ProblemNotFoundException exception,
+            HttpServletRequest request) {
 
         return createErrorResponse(HttpStatus.NOT_FOUND, exception.getMessage(), request);
     }
 
-    private ResponseEntity<ErrorResponse> createErrorResponse(HttpStatus status, String message,  HttpServletRequest request) {
+    private ResponseEntity<ErrorResponse> createErrorResponse(
+            HttpStatus status,
+            String message,
+            HttpServletRequest request) {
+
         ErrorResponse errorResponse = new ErrorResponse(
                 status.value(),
                 status.getReasonPhrase(),
