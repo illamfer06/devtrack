@@ -10,7 +10,8 @@ public class Problem {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String title;
-    private String difficulty;
+    @Enumerated(EnumType.STRING)
+    private Difficulty difficulty;
     private String algorithm;
     private boolean solved;
     private String notes;
@@ -21,7 +22,7 @@ public class Problem {
     public Problem(
             Long id,
             String title,
-            String difficulty,
+            Difficulty difficulty,
             String algorithm,
             boolean solved,
             String notes,
@@ -38,7 +39,7 @@ public class Problem {
 
     public Problem(
             String title,
-            String difficulty,
+            Difficulty difficulty,
             String algorithm,
             boolean solved,
             String notes,
@@ -58,7 +59,7 @@ public class Problem {
     public String getTitle() {
         return this.title;
     }
-    public String getDifficulty() {
+    public Difficulty getDifficulty() {
         return this.difficulty;
     }
     public String getAlgorithm() {
@@ -75,7 +76,7 @@ public class Problem {
     }
 
     public void setTitle(String title) {this.title = title;}
-    public void setDifficulty(String difficulty) {
+    public void setDifficulty(Difficulty difficulty) {
         this.difficulty = difficulty;
     }
     public void setAlgorithm(String algorithm) {

@@ -1,12 +1,13 @@
 package com.devtrack.backend.dto;
 
+import com.devtrack.backend.model.Difficulty;
 import jakarta.validation.constraints.NotBlank;
 
 public class CreateProblemRequest {
 
     @NotBlank(message = "Title cannot be empty")
     private String title;
-    private String difficulty;
+    private Difficulty difficulty;
     private String algorithm;
     private boolean solved;
     private String notes;
@@ -18,7 +19,7 @@ public class CreateProblemRequest {
     public String getTitle() {
         return title;
     }
-    public String getDifficulty() {
+    public Difficulty getDifficulty() {
         return difficulty;
     }
     public String getAlgorithm() {
@@ -37,7 +38,7 @@ public class CreateProblemRequest {
     public void setTitle(String title) {
         this.title = title;
     }
-    public void setDifficulty(String difficulty) {
+    public void setDifficulty(Difficulty difficulty) {
         this.difficulty = difficulty;
     }
     public void setAlgorithm(String algorithm) {

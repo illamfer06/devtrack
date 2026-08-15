@@ -4,6 +4,7 @@ import com.devtrack.backend.dto.ErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -44,6 +45,14 @@ public class GlobalExceptionHandler {
             HttpServletRequest request) {
 
         return createErrorResponse(HttpStatus.NOT_FOUND, exception.getMessage(), request);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleHttpMessageNotReadable(
+            HttpMessageNotReadableException exception,
+            HttpServletRequest request) {
+
+        return createErrorResponse(HttpStatus.BAD_REQUEST, "Difficulty must be one of: EASY, MEDIUM, HARD", request);
     }
 
     private ResponseEntity<ErrorResponse> createErrorResponse(

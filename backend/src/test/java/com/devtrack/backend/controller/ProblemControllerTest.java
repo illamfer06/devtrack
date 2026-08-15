@@ -4,6 +4,7 @@ import com.devtrack.backend.dto.CreateProblemRequest;
 import com.devtrack.backend.dto.ProblemResponse;
 import com.devtrack.backend.dto.UpdateProblemRequest;
 import com.devtrack.backend.exception.ProblemNotFoundException;
+import com.devtrack.backend.model.Difficulty;
 import com.devtrack.backend.service.ProblemService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -44,7 +45,7 @@ class ProblemControllerTest {
         ProblemResponse problemResponse1 = new ProblemResponse(
                 1L,
                 "Title 1",
-                "Difficulty 1",
+                Difficulty.EASY,
                 "Algorithm 1",
                 true,
                 "Notes 1",
@@ -54,7 +55,7 @@ class ProblemControllerTest {
         ProblemResponse problemResponse2 = new ProblemResponse(
                 2L,
                 "Title 2",
-                "Difficulty 2",
+                Difficulty.HARD,
                 "Algorithm 2",
                 false,
                 "Notes 2",
@@ -69,14 +70,14 @@ class ProblemControllerTest {
                 .andExpect(jsonPath("$", hasSize(2)))
                 .andExpect(jsonPath("$[0].id").value(1L))
                 .andExpect(jsonPath("$[0].title").value("Title 1"))
-                .andExpect(jsonPath("$[0].difficulty").value("Difficulty 1"))
+                .andExpect(jsonPath("$[0].difficulty").value("EASY"))
                 .andExpect(jsonPath("$[0].algorithm").value("Algorithm 1"))
                 .andExpect(jsonPath("$[0].solved").value(true))
                 .andExpect(jsonPath("$[0].notes").value("Notes 1"))
                 .andExpect(jsonPath("$[0].url").value("Url 1"))
                 .andExpect(jsonPath("$[1].id").value(2L))
                 .andExpect(jsonPath("$[1].title").value("Title 2"))
-                .andExpect(jsonPath("$[1].difficulty").value("Difficulty 2"))
+                .andExpect(jsonPath("$[1].difficulty").value("HARD"))
                 .andExpect(jsonPath("$[1].algorithm").value("Algorithm 2"))
                 .andExpect(jsonPath("$[1].solved").value(false))
                 .andExpect(jsonPath("$[1].notes").value("Notes 2"))
@@ -102,7 +103,7 @@ class ProblemControllerTest {
         ProblemResponse problemResponse = new ProblemResponse(
                 1L,
                 "Title",
-                "Difficulty",
+                Difficulty.EASY,
                 "Algorithm",
                 true,
                 "Notes",
@@ -116,7 +117,7 @@ class ProblemControllerTest {
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.id").value(1L))
                 .andExpect(jsonPath("$.title").value("Title"))
-                .andExpect(jsonPath("$.difficulty").value("Difficulty"))
+                .andExpect(jsonPath("$.difficulty").value("EASY"))
                 .andExpect(jsonPath("$.algorithm").value("Algorithm"))
                 .andExpect(jsonPath("$.solved").value(true))
                 .andExpect(jsonPath("$.notes").value("Notes"))
@@ -146,7 +147,7 @@ class ProblemControllerTest {
         CreateProblemRequest request = new CreateProblemRequest();
 
         request.setTitle("Title");
-        request.setDifficulty("Difficulty");
+        request.setDifficulty(Difficulty.EASY);
         request.setAlgorithm("Algorithm");
         request.setSolved(true);
         request.setNotes("Notes");
@@ -155,7 +156,7 @@ class ProblemControllerTest {
         ProblemResponse problemResponse = new ProblemResponse(
                 1L,
                 "Title",
-                "Difficulty",
+                Difficulty.EASY,
                 "Algorithm",
                 true,
                 "Notes",
@@ -173,7 +174,7 @@ class ProblemControllerTest {
                 .andExpect(header().string("Location", "/problems/1"))
                 .andExpect(jsonPath("$.id").value(1L))
                 .andExpect(jsonPath("$.title").value("Title"))
-                .andExpect(jsonPath("$.difficulty").value("Difficulty"))
+                .andExpect(jsonPath("$.difficulty").value("EASY"))
                 .andExpect(jsonPath("$.algorithm").value("Algorithm"))
                 .andExpect(jsonPath("$.solved").value(true))
                 .andExpect(jsonPath("$.notes").value("Notes"))
@@ -186,7 +187,7 @@ class ProblemControllerTest {
         CreateProblemRequest capturedRequest = argumentCaptor.getValue();
 
         assertEquals("Title", capturedRequest.getTitle());
-        assertEquals("Difficulty", capturedRequest.getDifficulty());
+        assertEquals(Difficulty.EASY, capturedRequest.getDifficulty());
         assertEquals("Algorithm", capturedRequest.getAlgorithm());
         assertTrue(capturedRequest.isSolved());
         assertEquals("Notes", capturedRequest.getNotes());
@@ -198,7 +199,7 @@ class ProblemControllerTest {
         CreateProblemRequest invalidRequest = new CreateProblemRequest();
 
         invalidRequest.setTitle("");
-        invalidRequest.setDifficulty("Difficulty");
+        invalidRequest.setDifficulty(Difficulty.EASY);
         invalidRequest.setAlgorithm("Algorithm");
         invalidRequest.setSolved(true);
         invalidRequest.setNotes("Notes");
@@ -219,11 +220,38 @@ class ProblemControllerTest {
     }
 
     @Test
+    void createProblemShouldReturn400WhenDifficultyIsNotValid() throws Exception {
+        String json = """
+                {
+                    "title": "Title",
+                    "difficulty": "IMPOSSIBLE",
+                    "algorithm": "Algorithm",
+                    "solved": true,
+                    "notes": "Notes",
+                    "url": "URL"
+                }
+                """;
+
+        mockMvc.perform(post("/problems")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad Request"))
+                .andExpect(jsonPath("$.message").value("Difficulty must be one of: EASY, MEDIUM, HARD"))
+                .andExpect(jsonPath("$.path").value("/problems"));
+
+        verify(problemService, never()).createProblem(any(CreateProblemRequest.class));
+    }
+
+    @Test
     void updateProblemShouldReturn200WhenRequestIsValidAndProblemExists() throws Exception {
         UpdateProblemRequest request = new UpdateProblemRequest();
 
         request.setTitle("Updated Title");
-        request.setDifficulty("Updated Difficulty");
+        request.setDifficulty(Difficulty.EASY);
         request.setAlgorithm("Updated Algorithm");
         request.setSolved(false);
         request.setNotes("Updated Notes");
@@ -232,7 +260,7 @@ class ProblemControllerTest {
         ProblemResponse problemResponse = new ProblemResponse(
                 1L,
                 "Updated Title",
-                "Updated Difficulty",
+                Difficulty.EASY,
                 "Updated Algorithm",
                 false,
                 "Updated Notes",
@@ -249,7 +277,7 @@ class ProblemControllerTest {
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.id").value(1L))
                 .andExpect(jsonPath("$.title").value("Updated Title"))
-                .andExpect(jsonPath("$.difficulty").value("Updated Difficulty"))
+                .andExpect(jsonPath("$.difficulty").value("EASY"))
                 .andExpect(jsonPath("$.algorithm").value("Updated Algorithm"))
                 .andExpect(jsonPath("$.solved").value(false))
                 .andExpect(jsonPath("$.notes").value("Updated Notes"))
@@ -262,7 +290,7 @@ class ProblemControllerTest {
         UpdateProblemRequest capturedRequest = argumentCaptor.getValue();
 
         assertEquals("Updated Title", capturedRequest.getTitle());
-        assertEquals("Updated Difficulty", capturedRequest.getDifficulty());
+        assertEquals(Difficulty.EASY, capturedRequest.getDifficulty());
         assertEquals("Updated Algorithm", capturedRequest.getAlgorithm());
         assertFalse(capturedRequest.isSolved());
         assertEquals("Updated Notes", capturedRequest.getNotes());
@@ -274,7 +302,7 @@ class ProblemControllerTest {
         UpdateProblemRequest request = new UpdateProblemRequest();
 
         request.setTitle("");
-        request.setDifficulty("Updated Difficulty");
+        request.setDifficulty(Difficulty.EASY);
         request.setAlgorithm("Updated Algorithm");
         request.setSolved(false);
         request.setNotes("Updated Notes");
@@ -299,7 +327,7 @@ class ProblemControllerTest {
         UpdateProblemRequest request = new UpdateProblemRequest();
 
         request.setTitle("Updated Title");
-        request.setDifficulty("Updated Difficulty");
+        request.setDifficulty(Difficulty.EASY);
         request.setAlgorithm("Updated Algorithm");
         request.setSolved(false);
         request.setNotes("Updated Notes");

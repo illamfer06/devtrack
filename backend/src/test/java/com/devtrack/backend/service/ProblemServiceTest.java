@@ -4,6 +4,7 @@ import com.devtrack.backend.dto.CreateProblemRequest;
 import com.devtrack.backend.dto.ProblemResponse;
 import com.devtrack.backend.dto.UpdateProblemRequest;
 import com.devtrack.backend.exception.ProblemNotFoundException;
+import com.devtrack.backend.model.Difficulty;
 import com.devtrack.backend.model.Problem;
 import com.devtrack.backend.repository.ProblemRepository;
 import org.junit.jupiter.api.Test;
@@ -39,7 +40,7 @@ class ProblemServiceTest {
         Problem problem = new Problem(
                 1L,
                 "Title",
-                "Difficulty",
+                Difficulty.EASY,
                 "Algorithm",
                 true,
                 "Notes",
@@ -52,7 +53,7 @@ class ProblemServiceTest {
 
         assertEquals(1L, problemResponse.getId());
         assertEquals("Title", problemResponse.getTitle());
-        assertEquals("Difficulty", problemResponse.getDifficulty());
+        assertEquals(Difficulty.EASY, problemResponse.getDifficulty());
         assertEquals("Algorithm", problemResponse.getAlgorithm());
         assertTrue(problemResponse.isSolved());
         assertEquals("Notes", problemResponse.getNotes());
@@ -83,7 +84,7 @@ class ProblemServiceTest {
         problems.add(new Problem(
                 1L,
                 "Title1",
-                "Difficulty1",
+                Difficulty.EASY,
                 "Algorithm1",
                 true,
                 "Notes1",
@@ -93,7 +94,7 @@ class ProblemServiceTest {
         problems.add(new Problem(
                 2L,
                 "Title2",
-                "Difficulty2",
+                Difficulty.HARD,
                 "Algorithm2",
                 false,
                 "Notes2",
@@ -110,7 +111,7 @@ class ProblemServiceTest {
 
         assertEquals(1L, problemResponse1.getId());
         assertEquals("Title1", problemResponse1.getTitle());
-        assertEquals("Difficulty1", problemResponse1.getDifficulty());
+        assertEquals(Difficulty.EASY, problemResponse1.getDifficulty());
         assertEquals("Algorithm1", problemResponse1.getAlgorithm());
         assertTrue(problemResponse1.isSolved());
         assertEquals("Notes1", problemResponse1.getNotes());
@@ -120,7 +121,7 @@ class ProblemServiceTest {
 
         assertEquals(2L, problemResponse2.getId());
         assertEquals("Title2", problemResponse2.getTitle());
-        assertEquals("Difficulty2", problemResponse2.getDifficulty());
+        assertEquals(Difficulty.HARD, problemResponse2.getDifficulty());
         assertEquals("Algorithm2", problemResponse2.getAlgorithm());
         assertFalse(problemResponse2.isSolved());
         assertEquals("Notes2", problemResponse2.getNotes());
@@ -147,7 +148,7 @@ class ProblemServiceTest {
         CreateProblemRequest request = new CreateProblemRequest();
 
         request.setTitle("Title");
-        request.setDifficulty("Difficulty");
+        request.setDifficulty(Difficulty.EASY);
         request.setAlgorithm("Algorithm");
         request.setSolved(true);
         request.setNotes("Notes");
@@ -156,7 +157,7 @@ class ProblemServiceTest {
         Problem savedProblem = new Problem (
                 1L,
                 "Title",
-                "Difficulty",
+                Difficulty.EASY,
                 "Algorithm",
                 true,
                 "Notes",
@@ -169,7 +170,7 @@ class ProblemServiceTest {
 
         assertEquals(1L, problemResponse.getId());
         assertEquals("Title", problemResponse.getTitle());
-        assertEquals("Difficulty", problemResponse.getDifficulty());
+        assertEquals(Difficulty.EASY, problemResponse.getDifficulty());
         assertEquals("Algorithm", problemResponse.getAlgorithm());
         assertTrue(problemResponse.isSolved());
         assertEquals("Notes", problemResponse.getNotes());
@@ -183,7 +184,7 @@ class ProblemServiceTest {
 
         assertNull(problemToSave.getId());
         assertEquals("Title", problemToSave.getTitle());
-        assertEquals("Difficulty", problemToSave.getDifficulty());
+        assertEquals(Difficulty.EASY, problemToSave.getDifficulty());
         assertEquals("Algorithm", problemToSave.getAlgorithm());
         assertTrue(problemToSave.isSolved());
         assertEquals("Notes", problemToSave.getNotes());
@@ -195,7 +196,7 @@ class ProblemServiceTest {
         Problem problem = new Problem(
                 1L,
                 "Title",
-                "Difficulty",
+                Difficulty.EASY,
                 "Algorithm",
                 false,
                 "Notes",
@@ -205,7 +206,7 @@ class ProblemServiceTest {
         UpdateProblemRequest request = new UpdateProblemRequest();
 
         request.setTitle("Updated Title");
-        request.setDifficulty("Updated Difficulty");
+        request.setDifficulty(Difficulty.MEDIUM);
         request.setAlgorithm("Updated Algorithm");
         request.setSolved(true);
         request.setNotes("Updated Notes");
@@ -214,7 +215,7 @@ class ProblemServiceTest {
         Problem updatedProblem = new Problem(
                 1L,
                 "Updated Title",
-                "Updated Difficulty",
+                Difficulty.MEDIUM,
                 "Updated Algorithm",
                 true,
                 "Updated Notes",
@@ -228,7 +229,7 @@ class ProblemServiceTest {
 
         assertEquals(1L, problemResponse.getId());
         assertEquals("Updated Title", problemResponse.getTitle());
-        assertEquals("Updated Difficulty", problemResponse.getDifficulty());
+        assertEquals(Difficulty.MEDIUM, problemResponse.getDifficulty());
         assertEquals("Updated Algorithm", problemResponse.getAlgorithm());
         assertTrue(problemResponse.isSolved());
         assertEquals("Updated Notes", problemResponse.getNotes());
@@ -243,7 +244,7 @@ class ProblemServiceTest {
 
         assertEquals(1L, problemToSave.getId());
         assertEquals("Updated Title", problemToSave.getTitle());
-        assertEquals("Updated Difficulty", problemToSave.getDifficulty());
+        assertEquals(Difficulty.MEDIUM, problemToSave.getDifficulty());
         assertEquals("Updated Algorithm", problemToSave.getAlgorithm());
         assertTrue(problemToSave.isSolved());
         assertEquals("Updated Notes", problemToSave.getNotes());
@@ -255,7 +256,7 @@ class ProblemServiceTest {
         UpdateProblemRequest request = new UpdateProblemRequest();
 
         request.setTitle("Updated Title");
-        request.setDifficulty("Updated Difficulty");
+        request.setDifficulty(Difficulty.HARD);
         request.setAlgorithm("Updated Algorithm");
         request.setSolved(true);
         request.setNotes("Updated Notes");
@@ -277,7 +278,7 @@ class ProblemServiceTest {
         Problem problem = new Problem(
                 1L,
                 "Title",
-                "Difficulty",
+                Difficulty.EASY,
                 "Algorithm",
                 true,
                 "Notes",

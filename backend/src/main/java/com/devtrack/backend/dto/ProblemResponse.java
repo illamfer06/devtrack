@@ -1,10 +1,12 @@
 package com.devtrack.backend.dto;
 
+import com.devtrack.backend.model.Difficulty;
+
 public class ProblemResponse {
 
     private Long id;
     private String title;
-    private String difficulty;
+    private Difficulty difficulty;
     private String algorithm;
     private boolean solved;
     private String notes;
@@ -13,7 +15,7 @@ public class ProblemResponse {
     public ProblemResponse(
             Long id,
             String title,
-            String difficulty,
+            Difficulty difficulty,
             String algorithm,
             boolean solved,
             String notes,
@@ -34,7 +36,7 @@ public class ProblemResponse {
     public String getTitle() {
         return title;
     }
-    public String getDifficulty() {
+    public Difficulty getDifficulty() {
         return difficulty;
     }
     public String getAlgorithm() {return algorithm;}

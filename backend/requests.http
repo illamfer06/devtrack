@@ -1,10 +1,6 @@
-###
-
 ### Health
 
 GET http://localhost:8080/health
-
-###
 
 ### Create Problem
 
@@ -12,17 +8,29 @@ POST http://localhost:8080/problems
 Content-Type: application/json
 Accept: application/json
 
-
 {
   "title": "Binary Search",
-  "difficulty": "Easy",
+  "difficulty": "EASY",
   "algorithm": "Binary Search",
   "solved": false,
   "notes": "Review left and right limits",
   "url": "https://leetcode.com/problems/binary-search/"
 }
 
-###
+### Create Problem - Bad Difficulty
+
+POST http://localhost:8080/problems
+Content-Type: application/json
+Accept: application/json
+
+{
+  "title": "Binary Search",
+  "difficulty": "IMPOSSIBLE",
+  "algorithm": "Binary Search",
+  "solved": false,
+  "notes": "Review left and right limits",
+  "url": "https://leetcode.com/problems/binary-search/"
+}
 
 ### Create problem - Empty title (400 Bad Request)
 
@@ -30,34 +38,26 @@ POST http://localhost:8080/problems
 Content-Type: application/json
 Accept: application/json
 
-
 {
   "title": "",
-  "difficulty": "Easy",
+  "difficulty": "EASY",
   "algorithm": "Hash Map",
   "solved": false,
   "notes": "Testing global exception handler",
   "url": "https://leetcode.com/problems/two-sum/"
 }
-###
 
 ### Get Problems
 
 GET http://localhost:8080/problems
 
-###
-
 ### Get Problem by id (exists)
 
 GET http://localhost:8080/problems/1
 
-###
-
 ### Get Problem by id (not found)
 
 GET http://localhost:8080/problems/99999
-
-###
 
 ### Update problem
 
@@ -74,8 +74,6 @@ Accept: application/json
   "url": "https://leetcode.com/problems/binary-search/"
 }
 
-###
-
 ### Update non-existing problem
 
 PUT http://localhost:8080/problems/99999
@@ -91,13 +89,9 @@ Accept: application/json
   "url": "https://example.com"
 }
 
-###
-
 ### Delete existing problem
 
-DELETE http://localhost:8080/problems/8
-
-###
+DELETE http://localhost:8080/problems/10
 
 ### Delete non-existing problem
 
