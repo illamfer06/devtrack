@@ -4,6 +4,7 @@ import com.devtrack.backend.dto.CreateProblemRequest;
 import com.devtrack.backend.dto.ProblemResponse;
 import com.devtrack.backend.dto.UpdateProblemRequest;
 import com.devtrack.backend.exception.ProblemNotFoundException;
+import com.devtrack.backend.model.Difficulty;
 import com.devtrack.backend.model.Problem;
 import com.devtrack.backend.repository.ProblemRepository;
 import org.springframework.data.domain.Sort;
@@ -51,6 +52,21 @@ public class ProblemService {
         Problem problem = findProblemById(id);
 
         return toProblemResponse(problem);
+    }
+
+    public List<ProblemResponse> getProblems(Difficulty difficulty) {
+        if (difficulty == null) {
+            return getAllProblems();
+        }
+
+        List<Problem> problems = problemRepository.findByDifficulty(difficulty);
+        List<ProblemResponse> problemResponses = new ArrayList<>();
+
+        for (Problem problem : problems) {
+            problemResponses.add(toProblemResponse(problem));
+        }
+
+        return problemResponses;
     }
 
     public ProblemResponse updateProblem(Long id, UpdateProblemRequest request) {

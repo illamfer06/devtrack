@@ -4,6 +4,7 @@ package com.devtrack.backend.controller;
 import com.devtrack.backend.dto.CreateProblemRequest;
 import com.devtrack.backend.dto.ProblemResponse;
 import com.devtrack.backend.dto.UpdateProblemRequest;
+import com.devtrack.backend.model.Difficulty;
 import com.devtrack.backend.service.ProblemService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -23,8 +24,9 @@ public class ProblemController {
     }
 
     @GetMapping
-    public List<ProblemResponse> getProblems() {
-        return problemService.getAllProblems();
+    public List<ProblemResponse> getProblems(@RequestParam(required = false) Difficulty difficulty) {
+
+        return problemService.getProblems(difficulty);
     }
 
     @GetMapping("/{id}")

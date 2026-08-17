@@ -38,9 +38,7 @@ public class CreateProblemRequest {
     public void setTitle(String title) {
         this.title = title;
     }
-    public void setDifficulty(Difficulty difficulty) {
-        this.difficulty = difficulty;
-    }
+    public void setDifficulty(Difficulty difficulty) { this.difficulty = difficulty;}
     public void setAlgorithm(String algorithm) {
         this.algorithm = algorithm;
     }
