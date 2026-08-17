@@ -54,12 +54,21 @@ public class ProblemService {
         return toProblemResponse(problem);
     }
 
-    public List<ProblemResponse> getProblems(Difficulty difficulty) {
-        if (difficulty == null) {
+    public List<ProblemResponse> getProblems(Difficulty difficulty, Boolean solved) {
+        if (difficulty == null && solved == null) {
             return getAllProblems();
         }
 
-        List<Problem> problems = problemRepository.findByDifficulty(difficulty);
+        List<Problem> problems;
+
+        if (difficulty == null) {
+            problems = problemRepository.findBySolved(solved);
+        } else if (solved == null) {
+            problems = problemRepository.findByDifficulty(difficulty);
+        } else {
+            problems = problemRepository.findByDifficultyAndSolved(difficulty, solved);
+        }
+
         List<ProblemResponse> problemResponses = new ArrayList<>();
 
         for (Problem problem : problems) {

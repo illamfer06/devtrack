@@ -9,4 +9,6 @@ import java.util.List;
 public interface ProblemRepository extends JpaRepository<Problem, Long> {
 
     List<Problem> findByDifficulty(Difficulty difficulty);
+    List<Problem> findBySolved(boolean solved);
+    List<Problem> findByDifficultyAndSolved(Difficulty difficulty, boolean solved);
 }

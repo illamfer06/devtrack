@@ -61,7 +61,18 @@ public class GlobalExceptionHandler {
             MethodArgumentTypeMismatchException exception,
             HttpServletRequest request) {
 
-        return createErrorResponse(HttpStatus.BAD_REQUEST, "Difficulty must be one of: EASY, MEDIUM, HARD", request);
+        String nameException = exception.getName();
+        String message;
+
+        if (nameException.equals("difficulty")) {
+            message = "Difficulty must be one of: EASY, MEDIUM, HARD";
+        } else if (nameException.equals("solved")) {
+            message = "Solved must be true or false";
+        } else {
+            message = "Invalid request parameter";
+        }
+
+        return createErrorResponse(HttpStatus.BAD_REQUEST, message, request);
     }
 
     private ResponseEntity<ErrorResponse> createErrorResponse(

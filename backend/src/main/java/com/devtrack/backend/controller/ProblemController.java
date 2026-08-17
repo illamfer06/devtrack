@@ -24,9 +24,11 @@ public class ProblemController {
     }
 
     @GetMapping
-    public List<ProblemResponse> getProblems(@RequestParam(required = false) Difficulty difficulty) {
+    public List<ProblemResponse> getProblems(
+            @RequestParam(required = false) Difficulty difficulty,
+            @RequestParam(required = false) Boolean solved) {
 
-        return problemService.getProblems(difficulty);
+        return problemService.getProblems(difficulty, solved);
     }
 
     @GetMapping("/{id}")

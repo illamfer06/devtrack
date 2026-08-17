@@ -69,13 +69,25 @@ GET http://localhost:8080/problems/3
 
 GET http://localhost:8080/problems/99999
 
-### Get Problem by Difficulty
+### Get Problems by Difficulty
 
 GET http://localhost:8080/problems?difficulty=EASY
 
 ### Get Problem by invalid difficulty
 
 GET http://localhost:8080/problems?difficulty=IMPOSSIBLE
+
+### Get Problems by Solved
+
+GET http://localhost:8080/problems?solved=true
+
+### Get Problems by invalid solved
+
+GET http://localhost:8080/problems?solved=invalid
+
+### Get Problems by Difficulty and Solved
+
+GET http://localhost:8080/problems?difficulty=EASY&solved=false
 
 ### Update problem
 

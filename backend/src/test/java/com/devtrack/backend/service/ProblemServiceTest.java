@@ -22,6 +22,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.never;
@@ -143,7 +144,7 @@ class ProblemServiceTest {
     }
 
     @Test
-    void getProblemsShouldReturnAllProblemsWhenDifficultyIsNull() {
+    void getProblemsShouldReturnAllProblemsWhenDifficultyAndSolvedAreNull() {
         List<Problem> problems = new ArrayList<>();
 
         problems.add(new Problem(
@@ -168,7 +169,7 @@ class ProblemServiceTest {
 
         when(problemRepository.findAll(Sort.by("id"))).thenReturn(problems);
 
-        List<ProblemResponse> problemResponses = problemService.getProblems(null);
+        List<ProblemResponse> problemResponses = problemService.getProblems(null, null);
 
         assertEquals(2, problemResponses.size());
 
@@ -194,6 +195,8 @@ class ProblemServiceTest {
 
         verify(problemRepository).findAll(Sort.by("id"));
         verify(problemRepository, never()).findByDifficulty(any());
+        verify(problemRepository, never()).findBySolved(anyBoolean());
+        verify(problemRepository, never()).findByDifficultyAndSolved(any(Difficulty.class), anyBoolean());
     }
 
     @Test
@@ -222,7 +225,7 @@ class ProblemServiceTest {
 
         when(problemRepository.findByDifficulty(Difficulty.EASY)).thenReturn(problems);
 
-        List<ProblemResponse> problemResponses = problemService.getProblems(Difficulty.EASY);
+        List<ProblemResponse> problemResponses = problemService.getProblems(Difficulty.EASY, null);
 
         assertEquals(2, problemResponses.size());
 
@@ -248,6 +251,120 @@ class ProblemServiceTest {
 
         verify(problemRepository).findByDifficulty(Difficulty.EASY);
         verify(problemRepository, never()).findAll(any(Sort.class));
+        verify(problemRepository, never()).findBySolved(anyBoolean());
+        verify(problemRepository, never()).findByDifficultyAndSolved(any(Difficulty.class), anyBoolean());
+    }
+
+    @Test
+    void getProblemsShouldReturnOnlyProblemsWithGivenSolved() {
+        List<Problem> problems = new ArrayList<>();
+
+        problems.add(new Problem(
+                1L,
+                "Title 1",
+                Difficulty.EASY,
+                "Algorithm 1",
+                true,
+                "Notes 1",
+                "Url 1"
+        ));
+
+        problems.add(new Problem(
+                2L,
+                "Title 2",
+                Difficulty.EASY,
+                "Algorithm 2",
+                true,
+                "Notes 2",
+                "Url 2"
+        ));
+
+        when(problemRepository.findBySolved(true)).thenReturn(problems);
+
+        List<ProblemResponse> problemResponses = problemService.getProblems(null, true);
+
+        assertEquals(2, problemResponses.size());
+
+        ProblemResponse problemResponse1 = problemResponses.getFirst();
+
+        assertEquals(1L, problemResponse1.getId());
+        assertEquals("Title 1", problemResponse1.getTitle());
+        assertEquals(Difficulty.EASY, problemResponse1.getDifficulty());
+        assertEquals("Algorithm 1", problemResponse1.getAlgorithm());
+        assertTrue(problemResponse1.isSolved());
+        assertEquals("Notes 1", problemResponse1.getNotes());
+        assertEquals("Url 1", problemResponse1.getUrl());
+
+        ProblemResponse problemResponse2 = problemResponses.get(1);
+
+        assertEquals(2L, problemResponse2.getId());
+        assertEquals("Title 2", problemResponse2.getTitle());
+        assertEquals(Difficulty.EASY, problemResponse2.getDifficulty());
+        assertEquals("Algorithm 2", problemResponse2.getAlgorithm());
+        assertTrue(problemResponse2.isSolved());
+        assertEquals("Notes 2", problemResponse2.getNotes());
+        assertEquals("Url 2", problemResponse2.getUrl());
+
+        verify(problemRepository).findBySolved(true);
+        verify(problemRepository, never()).findAll(any(Sort.class));
+        verify(problemRepository, never()).findByDifficulty(any(Difficulty.class));
+        verify(problemRepository, never()).findByDifficultyAndSolved(any(Difficulty.class), anyBoolean());
+    }
+
+    @Test
+    void getProblemsShouldReturnOnlyProblemsWithGivenDifficultyAndSolved() {
+        List<Problem> problems = new ArrayList<>();
+
+        problems.add(new Problem(
+                1L,
+                "Title 1",
+                Difficulty.EASY,
+                "Algorithm 1",
+                true,
+                "Notes 1",
+                "Url 1"
+        ));
+
+        problems.add(new Problem(
+                2L,
+                "Title 2",
+                Difficulty.EASY,
+                "Algorithm 2",
+                true,
+                "Notes 2",
+                "Url 2"
+        ));
+
+        when(problemRepository.findByDifficultyAndSolved(Difficulty.EASY, true)).thenReturn(problems);
+
+        List<ProblemResponse> problemResponses = problemService.getProblems(Difficulty.EASY, true);
+
+        assertEquals(2, problemResponses.size());
+
+        ProblemResponse problemResponse1 = problemResponses.getFirst();
+
+        assertEquals(1L, problemResponse1.getId());
+        assertEquals("Title 1", problemResponse1.getTitle());
+        assertEquals(Difficulty.EASY, problemResponse1.getDifficulty());
+        assertEquals("Algorithm 1", problemResponse1.getAlgorithm());
+        assertTrue(problemResponse1.isSolved());
+        assertEquals("Notes 1", problemResponse1.getNotes());
+        assertEquals("Url 1", problemResponse1.getUrl());
+
+        ProblemResponse problemResponse2 = problemResponses.get(1);
+
+        assertEquals(2L, problemResponse2.getId());
+        assertEquals("Title 2", problemResponse2.getTitle());
+        assertEquals(Difficulty.EASY, problemResponse2.getDifficulty());
+        assertEquals("Algorithm 2", problemResponse2.getAlgorithm());
+        assertTrue(problemResponse2.isSolved());
+        assertEquals("Notes 2", problemResponse2.getNotes());
+        assertEquals("Url 2", problemResponse2.getUrl());
+
+        verify(problemRepository).findByDifficultyAndSolved(Difficulty.EASY, true);
+        verify(problemRepository, never()).findAll(any(Sort.class));
+        verify(problemRepository, never()).findByDifficulty(any(Difficulty.class));
+        verify(problemRepository, never()).findBySolved(anyBoolean());
     }
 
     @Test

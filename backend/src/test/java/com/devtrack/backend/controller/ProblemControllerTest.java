@@ -62,7 +62,7 @@ class ProblemControllerTest {
                 "Url 2"
         );
 
-        when(problemService.getProblems(null)).thenReturn(List.of(problemResponse1, problemResponse2));
+        when(problemService.getProblems(null, null)).thenReturn(List.of(problemResponse1, problemResponse2));
 
         mockMvc.perform(get("/problems"))
                 .andExpect(status().isOk())
@@ -83,23 +83,23 @@ class ProblemControllerTest {
                 .andExpect(jsonPath("$[1].notes").value("Notes 2"))
                 .andExpect(jsonPath("$[1].url").value("Url 2"));
 
-        verify(problemService).getProblems(null);
+        verify(problemService).getProblems(null, null);
     }
 
     @Test
     void getProblemsShouldReturn200WhenNoProblemsExist() throws Exception {
-        when(problemService.getProblems(null)).thenReturn(Collections.emptyList());
+        when(problemService.getProblems(null, null)).thenReturn(Collections.emptyList());
 
         mockMvc.perform(get("/problems"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$", hasSize(0)));
 
-        verify(problemService).getProblems(null);
+        verify(problemService).getProblems(null, null);
     }
 
     @Test
-    void getProblemByIdShouldReturn200WhenProblemExists() throws Exception {
+    void getProblemsByIdShouldReturn200WhenProblemExists() throws Exception {
         ProblemResponse problemResponse = new ProblemResponse(
                 1L,
                 "Title",
@@ -127,7 +127,7 @@ class ProblemControllerTest {
     }
 
     @Test
-    void getProblemByIdShouldReturn404WhenProblemDoesNotExist() throws Exception {
+    void getProblemsByIdShouldReturn404WhenProblemDoesNotExist() throws Exception {
         when(problemService.getProblemById(99L))
                 .thenThrow(new ProblemNotFoundException("Problem with id 99 was not found"));
 
@@ -164,7 +164,7 @@ class ProblemControllerTest {
                 "Url 2"
         );
 
-        when(problemService.getProblems(Difficulty.EASY)).thenReturn(List.of(problemResponse1, problemResponse2));
+        when(problemService.getProblems(Difficulty.EASY, null)).thenReturn(List.of(problemResponse1, problemResponse2));
 
         mockMvc.perform(get("/problems?difficulty=EASY"))
                 .andExpect(status().isOk())
@@ -185,19 +185,19 @@ class ProblemControllerTest {
                 .andExpect(jsonPath("$[1].notes").value("Notes 2"))
                 .andExpect(jsonPath("$[1].url").value("Url 2"));
 
-        verify(problemService).getProblems(Difficulty.EASY);
+        verify(problemService).getProblems(Difficulty.EASY, null);
     }
 
     @Test
-    void getProblemShouldReturn200AndEmptyListWhenNoProblemMatchDifficulty() throws Exception {
-        when(problemService.getProblems(Difficulty.HARD)).thenReturn(Collections.emptyList());
+    void getProblemsShouldReturn200AndEmptyListWhenNoProblemMatchDifficulty() throws Exception {
+        when(problemService.getProblems(Difficulty.HARD, null)).thenReturn(Collections.emptyList());
 
         mockMvc.perform(get("/problems?difficulty=HARD"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$", hasSize(0)));
 
-        verify(problemService).getProblems(Difficulty.HARD);
+        verify(problemService).getProblems(Difficulty.HARD, null);
     }
 
     @Test
@@ -210,7 +210,136 @@ class ProblemControllerTest {
                 .andExpect(jsonPath("$.message").value("Difficulty must be one of: EASY, MEDIUM, HARD"))
                 .andExpect(jsonPath("$.path").value("/problems"));
 
-        verify(problemService, never()).getProblems(any());
+        verify(problemService, never()).getProblems(any(), any());
+    }
+
+    @Test
+    void getProblemsShouldReturn200WhenFilteringBySolved() throws Exception {
+        ProblemResponse problemResponse1 = new ProblemResponse(
+                1L,
+                "Title 1",
+                Difficulty.EASY,
+                "Algorithm 1",
+                true,
+                "Notes 1",
+                "Url 1"
+        );
+
+        ProblemResponse problemResponse2 = new ProblemResponse(
+                2L,
+                "Title 2",
+                Difficulty.EASY,
+                "Algorithm 2",
+                true,
+                "Notes 2",
+                "Url 2"
+        );
+
+        when(problemService.getProblems(null,true)).thenReturn(List.of(problemResponse1, problemResponse2));
+
+        mockMvc.perform(get("/problems?solved=true"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$", hasSize(2)))
+                .andExpect(jsonPath("$[0].id").value(1L))
+                .andExpect(jsonPath("$[0].title").value("Title 1"))
+                .andExpect(jsonPath("$[0].difficulty").value("EASY"))
+                .andExpect(jsonPath("$[0].algorithm").value("Algorithm 1"))
+                .andExpect(jsonPath("$[0].solved").value(true))
+                .andExpect(jsonPath("$[0].notes").value("Notes 1"))
+                .andExpect(jsonPath("$[0].url").value("Url 1"))
+                .andExpect(jsonPath("$[1].id").value(2L))
+                .andExpect(jsonPath("$[1].title").value("Title 2"))
+                .andExpect(jsonPath("$[1].difficulty").value("EASY"))
+                .andExpect(jsonPath("$[1].algorithm").value("Algorithm 2"))
+                .andExpect(jsonPath("$[1].solved").value(true))
+                .andExpect(jsonPath("$[1].notes").value("Notes 2"))
+                .andExpect(jsonPath("$[1].url").value("Url 2"));
+
+        verify(problemService).getProblems(null, true);
+    }
+
+    @Test
+    void getProblemShouldReturn200AndEmptyListWhenNoProblemMatchSolved() throws Exception {
+        when(problemService.getProblems(null,false)).thenReturn(Collections.emptyList());
+
+        mockMvc.perform(get("/problems?solved=false"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$", hasSize(0)));
+
+        verify(problemService).getProblems(null, false);
+    }
+
+    @Test
+    void getProblemsShouldReturn400WhenSolvedIsInvalid() throws Exception {
+        mockMvc.perform(get("/problems?solved=invalid"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad Request"))
+                .andExpect(jsonPath("$.message").value("Solved must be true or false"))
+                .andExpect(jsonPath("$.path").value("/problems"));
+
+        verify(problemService, never()).getProblems(any(),any());
+    }
+
+    @Test
+    void getProblemsShouldReturn200WhenFilteringByDifficultyAndSolved() throws Exception {
+        ProblemResponse problemResponse1 = new ProblemResponse(
+                1L,
+                "Title 1",
+                Difficulty.EASY,
+                "Algorithm 1",
+                true,
+                "Notes 1",
+                "Url 1"
+        );
+
+        ProblemResponse problemResponse2 = new ProblemResponse(
+                2L,
+                "Title 2",
+                Difficulty.EASY,
+                "Algorithm 2",
+                true,
+                "Notes 2",
+                "Url 2"
+        );
+
+        when(problemService.getProblems(Difficulty.EASY, true)).thenReturn(List.of(problemResponse1, problemResponse2));
+
+        mockMvc.perform(get("/problems?difficulty=EASY&solved=true"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$", hasSize(2)))
+                .andExpect(jsonPath("$[0].id").value(1L))
+                .andExpect(jsonPath("$[0].title").value("Title 1"))
+                .andExpect(jsonPath("$[0].difficulty").value("EASY"))
+                .andExpect(jsonPath("$[0].algorithm").value("Algorithm 1"))
+                .andExpect(jsonPath("$[0].solved").value(true))
+                .andExpect(jsonPath("$[0].notes").value("Notes 1"))
+                .andExpect(jsonPath("$[0].url").value("Url 1"))
+                .andExpect(jsonPath("$[1].id").value(2L))
+                .andExpect(jsonPath("$[1].title").value("Title 2"))
+                .andExpect(jsonPath("$[1].difficulty").value("EASY"))
+                .andExpect(jsonPath("$[1].algorithm").value("Algorithm 2"))
+                .andExpect(jsonPath("$[1].solved").value(true))
+                .andExpect(jsonPath("$[1].notes").value("Notes 2"))
+                .andExpect(jsonPath("$[1].url").value("Url 2"));
+
+        verify(problemService).getProblems(Difficulty.EASY, true);
+    }
+
+    @Test
+    void getProblemsShouldReturn200AndEmptyListWhenNoProblemMatchDifficultyAndSolved() throws Exception {
+        when(problemService.getProblems(Difficulty.HARD, false)).thenReturn(Collections.emptyList());
+
+        mockMvc.perform(get("/problems?difficulty=HARD&solved=false"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$", hasSize(0)));
+
+        verify(problemService).getProblems(Difficulty.HARD, false);
     }
 
     @Test
