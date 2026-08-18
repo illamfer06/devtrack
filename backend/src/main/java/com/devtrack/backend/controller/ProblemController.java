@@ -2,6 +2,7 @@ package com.devtrack.backend.controller;
 
 
 import com.devtrack.backend.dto.CreateProblemRequest;
+import com.devtrack.backend.dto.PageResponse;
 import com.devtrack.backend.dto.ProblemResponse;
 import com.devtrack.backend.dto.UpdateProblemRequest;
 import com.devtrack.backend.model.Difficulty;
@@ -9,6 +10,7 @@ import com.devtrack.backend.service.ProblemService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.data.domain.Pageable;
 
 import java.net.URI;
 import java.util.List;
@@ -24,11 +26,12 @@ public class ProblemController {
     }
 
     @GetMapping
-    public List<ProblemResponse> getProblems(
+    public PageResponse<ProblemResponse> getProblems(
             @RequestParam(required = false) Difficulty difficulty,
-            @RequestParam(required = false) Boolean solved) {
+            @RequestParam(required = false) Boolean solved,
+            Pageable pageable) {
 
-        return problemService.getProblems(difficulty, solved);
+        return problemService.getProblems(difficulty, solved, pageable);
     }
 
     @GetMapping("/{id}")

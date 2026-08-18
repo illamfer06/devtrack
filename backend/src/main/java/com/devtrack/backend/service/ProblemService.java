@@ -1,12 +1,15 @@
 package com.devtrack.backend.service;
 
 import com.devtrack.backend.dto.CreateProblemRequest;
+import com.devtrack.backend.dto.PageResponse;
 import com.devtrack.backend.dto.ProblemResponse;
 import com.devtrack.backend.dto.UpdateProblemRequest;
 import com.devtrack.backend.exception.ProblemNotFoundException;
 import com.devtrack.backend.model.Difficulty;
 import com.devtrack.backend.model.Problem;
 import com.devtrack.backend.repository.ProblemRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
@@ -54,28 +57,32 @@ public class ProblemService {
         return toProblemResponse(problem);
     }
 
-    public List<ProblemResponse> getProblems(Difficulty difficulty, Boolean solved) {
+    public PageResponse<ProblemResponse> getProblems(Difficulty difficulty, Boolean solved, Pageable pageable) {
+        Page<Problem> problems;
+
         if (difficulty == null && solved == null) {
-            return getAllProblems();
-        }
-
-        List<Problem> problems;
-
-        if (difficulty == null) {
-            problems = problemRepository.findBySolved(solved);
+            problems = problemRepository.findAll(pageable);
+        } else if (difficulty == null) {
+            problems = problemRepository.findBySolved(solved, pageable);
         } else if (solved == null) {
-            problems = problemRepository.findByDifficulty(difficulty);
+            problems = problemRepository.findByDifficulty(difficulty, pageable);
         } else {
-            problems = problemRepository.findByDifficultyAndSolved(difficulty, solved);
+            problems = problemRepository.findByDifficultyAndSolved(difficulty, solved, pageable);
         }
 
         List<ProblemResponse> problemResponses = new ArrayList<>();
 
-        for (Problem problem : problems) {
+        for (Problem problem : problems.getContent()) {
             problemResponses.add(toProblemResponse(problem));
         }
 
-        return problemResponses;
+        return new PageResponse<> (
+                problemResponses,
+                problems.getNumber(),
+                problems.getSize(),
+                problems.getTotalElements(),
+                problems.getTotalPages()
+        );
     }
 
     public ProblemResponse updateProblem(Long id, UpdateProblemRequest request) {

@@ -89,6 +89,18 @@ GET http://localhost:8080/problems?solved=invalid
 
 GET http://localhost:8080/problems?difficulty=EASY&solved=false
 
+### Get Problems paginated
+
+GET http://localhost:8080/problems?page=0&size=3
+
+### Order by id ascending
+
+GET http://localhost:8080/problems?page=0&size=10&sort=id,asc
+
+### Order by id descending
+
+GET http://localhost:8080/problems?page=0&size=10&sort=id,desc
+
 ### Update problem
 
 PUT http://localhost:8080/problems/3
