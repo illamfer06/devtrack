@@ -1,6 +1,7 @@
 package com.devtrack.backend.controller;
 
 import com.devtrack.backend.dto.CreateProblemRequest;
+import com.devtrack.backend.dto.PageResponse;
 import com.devtrack.backend.dto.ProblemResponse;
 import com.devtrack.backend.dto.UpdateProblemRequest;
 import com.devtrack.backend.exception.ProblemNotFoundException;
@@ -11,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.http.MediaType;
@@ -62,40 +64,64 @@ class ProblemControllerTest {
                 "Url 2"
         );
 
-        when(problemService.getProblems(null, null)).thenReturn(List.of(problemResponse1, problemResponse2));
+        PageResponse<ProblemResponse> response = new PageResponse<>(
+                List.of(problemResponse1, problemResponse2),
+                0,
+                2,
+                5,
+                3
+        );
+
+        when(problemService.getProblems(isNull(), isNull(), any(Pageable.class))).thenReturn(response);
 
         mockMvc.perform(get("/problems"))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$", hasSize(2)))
-                .andExpect(jsonPath("$[0].id").value(1L))
-                .andExpect(jsonPath("$[0].title").value("Title 1"))
-                .andExpect(jsonPath("$[0].difficulty").value("EASY"))
-                .andExpect(jsonPath("$[0].algorithm").value("Algorithm 1"))
-                .andExpect(jsonPath("$[0].solved").value(true))
-                .andExpect(jsonPath("$[0].notes").value("Notes 1"))
-                .andExpect(jsonPath("$[0].url").value("Url 1"))
-                .andExpect(jsonPath("$[1].id").value(2L))
-                .andExpect(jsonPath("$[1].title").value("Title 2"))
-                .andExpect(jsonPath("$[1].difficulty").value("HARD"))
-                .andExpect(jsonPath("$[1].algorithm").value("Algorithm 2"))
-                .andExpect(jsonPath("$[1].solved").value(false))
-                .andExpect(jsonPath("$[1].notes").value("Notes 2"))
-                .andExpect(jsonPath("$[1].url").value("Url 2"));
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content", hasSize(2)))
+                .andExpect(jsonPath("$.content[0].id").value(1L))
+                .andExpect(jsonPath("$.content[0].title").value("Title 1"))
+                .andExpect(jsonPath("$.content[0].difficulty").value("EASY"))
+                .andExpect(jsonPath("$.content[0].algorithm").value("Algorithm 1"))
+                .andExpect(jsonPath("$.content[0].solved").value(true))
+                .andExpect(jsonPath("$.content[0].notes").value("Notes 1"))
+                .andExpect(jsonPath("$.content[0].url").value("Url 1"))
+                .andExpect(jsonPath("$.content[1].id").value(2L))
+                .andExpect(jsonPath("$.content[1].title").value("Title 2"))
+                .andExpect(jsonPath("$.content[1].difficulty").value("HARD"))
+                .andExpect(jsonPath("$.content[1].algorithm").value("Algorithm 2"))
+                .andExpect(jsonPath("$.content[1].solved").value(false))
+                .andExpect(jsonPath("$.content[1].notes").value("Notes 2"))
+                .andExpect(jsonPath("$.content[1].url").value("Url 2"))
+                .andExpect(jsonPath("$.page").value(0))
+                .andExpect(jsonPath("$.size").value(2))
+                .andExpect(jsonPath("$.totalElements").value(5))
+                .andExpect(jsonPath("$.totalPages").value(3));
 
-        verify(problemService).getProblems(null, null);
+        verify(problemService).getProblems(isNull(), isNull(), any(Pageable.class));
     }
 
     @Test
     void getProblemsShouldReturn200WhenNoProblemsExist() throws Exception {
-        when(problemService.getProblems(null, null)).thenReturn(Collections.emptyList());
+        PageResponse<ProblemResponse> response = new PageResponse<>(
+                Collections.emptyList(),
+                0,
+                2,
+                0,
+                0
+        );
 
-        mockMvc.perform(get("/problems"))
+        when(problemService.getProblems(isNull(), isNull(), any(Pageable.class))).thenReturn(response);
+
+        mockMvc.perform(get("/problems?page=0&size=2"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$", hasSize(0)));
+                .andExpect(jsonPath("$.content", hasSize(0)))
+                .andExpect(jsonPath("$.page").value(0))
+                .andExpect(jsonPath("$.size").value(2))
+                .andExpect(jsonPath("$.totalElements").value(0))
+                .andExpect(jsonPath("$.totalPages").value(0));
 
-        verify(problemService).getProblems(null, null);
+        verify(problemService).getProblems(isNull(), isNull(), any(Pageable.class));
     }
 
     @Test
@@ -164,40 +190,77 @@ class ProblemControllerTest {
                 "Url 2"
         );
 
-        when(problemService.getProblems(Difficulty.EASY, null)).thenReturn(List.of(problemResponse1, problemResponse2));
+        PageResponse<ProblemResponse> response = new PageResponse<>(
+                List.of(problemResponse1, problemResponse2),
+                0,
+                2,
+                5,
+                3
+        );
 
-        mockMvc.perform(get("/problems?difficulty=EASY"))
+        when(problemService.getProblems(eq(Difficulty.EASY), isNull(), any(Pageable.class))).thenReturn(response);
+
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+
+        mockMvc.perform(get("/problems?difficulty=EASY&page=0&size=2"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$", hasSize(2)))
-                .andExpect(jsonPath("$[0].id").value(1L))
-                .andExpect(jsonPath("$[0].title").value("Title 1"))
-                .andExpect(jsonPath("$[0].difficulty").value("EASY"))
-                .andExpect(jsonPath("$[0].algorithm").value("Algorithm 1"))
-                .andExpect(jsonPath("$[0].solved").value(true))
-                .andExpect(jsonPath("$[0].notes").value("Notes 1"))
-                .andExpect(jsonPath("$[0].url").value("Url 1"))
-                .andExpect(jsonPath("$[1].id").value(2L))
-                .andExpect(jsonPath("$[1].title").value("Title 2"))
-                .andExpect(jsonPath("$[1].difficulty").value("EASY"))
-                .andExpect(jsonPath("$[1].algorithm").value("Algorithm 2"))
-                .andExpect(jsonPath("$[1].solved").value(false))
-                .andExpect(jsonPath("$[1].notes").value("Notes 2"))
-                .andExpect(jsonPath("$[1].url").value("Url 2"));
+                .andExpect(jsonPath("$.content", hasSize(2)))
+                .andExpect(jsonPath("$.content[0].id").value(1L))
+                .andExpect(jsonPath("$.content[0].title").value("Title 1"))
+                .andExpect(jsonPath("$.content[0].difficulty").value("EASY"))
+                .andExpect(jsonPath("$.content[0].algorithm").value("Algorithm 1"))
+                .andExpect(jsonPath("$.content[0].solved").value(true))
+                .andExpect(jsonPath("$.content[0].notes").value("Notes 1"))
+                .andExpect(jsonPath("$.content[0].url").value("Url 1"))
+                .andExpect(jsonPath("$.content[1].id").value(2L))
+                .andExpect(jsonPath("$.content[1].title").value("Title 2"))
+                .andExpect(jsonPath("$.content[1].difficulty").value("EASY"))
+                .andExpect(jsonPath("$.content[1].algorithm").value("Algorithm 2"))
+                .andExpect(jsonPath("$.content[1].solved").value(false))
+                .andExpect(jsonPath("$.content[1].notes").value("Notes 2"))
+                .andExpect(jsonPath("$.content[1].url").value("Url 2"))
+                .andExpect(jsonPath("$.page").value(0))
+                .andExpect(jsonPath("$.size").value(2))
+                .andExpect(jsonPath("$.totalElements").value(5))
+                .andExpect(jsonPath("$.totalPages").value(3));
 
-        verify(problemService).getProblems(Difficulty.EASY, null);
+        verify(problemService).getProblems(eq(Difficulty.EASY), isNull(), pageableCaptor.capture());
+
+        Pageable capturedPageable = pageableCaptor.getValue();
+
+        assertEquals(0, capturedPageable.getPageNumber());
+        assertEquals(2, capturedPageable.getPageSize());
     }
 
     @Test
     void getProblemsShouldReturn200AndEmptyListWhenNoProblemMatchDifficulty() throws Exception {
-        when(problemService.getProblems(Difficulty.HARD, null)).thenReturn(Collections.emptyList());
+        PageResponse<ProblemResponse> response = new PageResponse<>(
+                Collections.emptyList(),
+                0,
+                2,
+                0,
+                0
+        );
+        when(problemService.getProblems(eq(Difficulty.HARD), isNull(), any(Pageable.class))).thenReturn(response);
 
-        mockMvc.perform(get("/problems?difficulty=HARD"))
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+
+        mockMvc.perform(get("/problems?difficulty=HARD&page=0&size=2"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$", hasSize(0)));
+                .andExpect(jsonPath("$.content", hasSize(0)))
+                .andExpect(jsonPath("$.page").value(0))
+                .andExpect(jsonPath("$.size").value(2))
+                .andExpect(jsonPath("$.totalElements").value(0))
+                .andExpect(jsonPath("$.totalPages").value(0));
 
-        verify(problemService).getProblems(Difficulty.HARD, null);
+        verify(problemService).getProblems(eq(Difficulty.HARD), isNull(), pageableCaptor.capture());
+
+        Pageable capturedPageable = pageableCaptor.getValue();
+
+        assertEquals(0, capturedPageable.getPageNumber());
+        assertEquals(2, capturedPageable.getPageSize());
     }
 
     @Test
@@ -210,7 +273,7 @@ class ProblemControllerTest {
                 .andExpect(jsonPath("$.message").value("Difficulty must be one of: EASY, MEDIUM, HARD"))
                 .andExpect(jsonPath("$.path").value("/problems"));
 
-        verify(problemService, never()).getProblems(any(), any());
+        verify(problemService, never()).getProblems(any(), any(), any());
     }
 
     @Test
@@ -235,40 +298,77 @@ class ProblemControllerTest {
                 "Url 2"
         );
 
-        when(problemService.getProblems(null,true)).thenReturn(List.of(problemResponse1, problemResponse2));
+        PageResponse<ProblemResponse> response = new PageResponse<>(
+                List.of(problemResponse1, problemResponse2),
+                0,
+                2,
+                5,
+                3
+        );
 
-        mockMvc.perform(get("/problems?solved=true"))
+        when(problemService.getProblems(isNull(),eq(true), any(Pageable.class))).thenReturn(response);
+
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+
+        mockMvc.perform(get("/problems?solved=true&page=0&size=2"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$", hasSize(2)))
-                .andExpect(jsonPath("$[0].id").value(1L))
-                .andExpect(jsonPath("$[0].title").value("Title 1"))
-                .andExpect(jsonPath("$[0].difficulty").value("EASY"))
-                .andExpect(jsonPath("$[0].algorithm").value("Algorithm 1"))
-                .andExpect(jsonPath("$[0].solved").value(true))
-                .andExpect(jsonPath("$[0].notes").value("Notes 1"))
-                .andExpect(jsonPath("$[0].url").value("Url 1"))
-                .andExpect(jsonPath("$[1].id").value(2L))
-                .andExpect(jsonPath("$[1].title").value("Title 2"))
-                .andExpect(jsonPath("$[1].difficulty").value("EASY"))
-                .andExpect(jsonPath("$[1].algorithm").value("Algorithm 2"))
-                .andExpect(jsonPath("$[1].solved").value(true))
-                .andExpect(jsonPath("$[1].notes").value("Notes 2"))
-                .andExpect(jsonPath("$[1].url").value("Url 2"));
+                .andExpect(jsonPath("$.content", hasSize(2)))
+                .andExpect(jsonPath("$.content[0].id").value(1L))
+                .andExpect(jsonPath("$.content[0].title").value("Title 1"))
+                .andExpect(jsonPath("$.content[0].difficulty").value("EASY"))
+                .andExpect(jsonPath("$.content[0].algorithm").value("Algorithm 1"))
+                .andExpect(jsonPath("$.content[0].solved").value(true))
+                .andExpect(jsonPath("$.content[0].notes").value("Notes 1"))
+                .andExpect(jsonPath("$.content[0].url").value("Url 1"))
+                .andExpect(jsonPath("$.content[1].id").value(2L))
+                .andExpect(jsonPath("$.content[1].title").value("Title 2"))
+                .andExpect(jsonPath("$.content[1].difficulty").value("EASY"))
+                .andExpect(jsonPath("$.content[1].algorithm").value("Algorithm 2"))
+                .andExpect(jsonPath("$.content[1].solved").value(true))
+                .andExpect(jsonPath("$.content[1].notes").value("Notes 2"))
+                .andExpect(jsonPath("$.content[1].url").value("Url 2"))
+                .andExpect(jsonPath("$.page").value(0))
+                .andExpect(jsonPath("$.size").value(2))
+                .andExpect(jsonPath("$.totalElements").value(5))
+                .andExpect(jsonPath("$.totalPages").value(3));
 
-        verify(problemService).getProblems(null, true);
+        verify(problemService).getProblems(isNull(), eq(true), pageableCaptor.capture());
+
+        Pageable capturedPageable = pageableCaptor.getValue();
+
+        assertEquals(0, capturedPageable.getPageNumber());
+        assertEquals(2, capturedPageable.getPageSize());
     }
 
     @Test
-    void getProblemShouldReturn200AndEmptyListWhenNoProblemMatchSolved() throws Exception {
-        when(problemService.getProblems(null,false)).thenReturn(Collections.emptyList());
+    void getProblemsShouldReturn200AndEmptyListWhenNoProblemsMatchSolved() throws Exception {
+        PageResponse<ProblemResponse> response = new PageResponse<>(
+                Collections.emptyList(),
+                0,
+                2,
+                0,
+                0
+        );
+        when(problemService.getProblems(isNull(),eq(false), any(Pageable.class))).thenReturn(response);
 
-        mockMvc.perform(get("/problems?solved=false"))
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+
+        mockMvc.perform(get("/problems?solved=false&page=0&size=2"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$", hasSize(0)));
+                .andExpect(jsonPath("$.content", hasSize(0)))
+                .andExpect(jsonPath("$.page").value(0))
+                .andExpect(jsonPath("$.size").value(2))
+                .andExpect(jsonPath("$.totalElements").value(0))
+                .andExpect(jsonPath("$.totalPages").value(0));
 
-        verify(problemService).getProblems(null, false);
+        verify(problemService).getProblems(isNull(), eq(false), pageableCaptor.capture());
+
+        Pageable capturedPageable = pageableCaptor.getValue();
+
+        assertEquals(0, capturedPageable.getPageNumber());
+        assertEquals(2, capturedPageable.getPageSize());
     }
 
     @Test
@@ -281,7 +381,7 @@ class ProblemControllerTest {
                 .andExpect(jsonPath("$.message").value("Solved must be true or false"))
                 .andExpect(jsonPath("$.path").value("/problems"));
 
-        verify(problemService, never()).getProblems(any(),any());
+        verify(problemService, never()).getProblems(any(), any(), any(Pageable.class));
     }
 
     @Test
@@ -306,40 +406,78 @@ class ProblemControllerTest {
                 "Url 2"
         );
 
-        when(problemService.getProblems(Difficulty.EASY, true)).thenReturn(List.of(problemResponse1, problemResponse2));
+        PageResponse<ProblemResponse> response = new PageResponse<>(
+                List.of(problemResponse1, problemResponse2),
+                2,
+                5,
+                5,
+                1
+        );
 
-        mockMvc.perform(get("/problems?difficulty=EASY&solved=true"))
+        when(problemService.getProblems(eq(Difficulty.EASY), eq(true), any(Pageable.class))).thenReturn(response);
+
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+
+        mockMvc.perform(get("/problems?difficulty=EASY&solved=true&page=2&size=5"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$", hasSize(2)))
-                .andExpect(jsonPath("$[0].id").value(1L))
-                .andExpect(jsonPath("$[0].title").value("Title 1"))
-                .andExpect(jsonPath("$[0].difficulty").value("EASY"))
-                .andExpect(jsonPath("$[0].algorithm").value("Algorithm 1"))
-                .andExpect(jsonPath("$[0].solved").value(true))
-                .andExpect(jsonPath("$[0].notes").value("Notes 1"))
-                .andExpect(jsonPath("$[0].url").value("Url 1"))
-                .andExpect(jsonPath("$[1].id").value(2L))
-                .andExpect(jsonPath("$[1].title").value("Title 2"))
-                .andExpect(jsonPath("$[1].difficulty").value("EASY"))
-                .andExpect(jsonPath("$[1].algorithm").value("Algorithm 2"))
-                .andExpect(jsonPath("$[1].solved").value(true))
-                .andExpect(jsonPath("$[1].notes").value("Notes 2"))
-                .andExpect(jsonPath("$[1].url").value("Url 2"));
+                .andExpect(jsonPath("$.content", hasSize(2)))
+                .andExpect(jsonPath("$.content[0].id").value(1L))
+                .andExpect(jsonPath("$.content[0].title").value("Title 1"))
+                .andExpect(jsonPath("$.content[0].difficulty").value("EASY"))
+                .andExpect(jsonPath("$.content[0].algorithm").value("Algorithm 1"))
+                .andExpect(jsonPath("$.content[0].solved").value(true))
+                .andExpect(jsonPath("$.content[0].notes").value("Notes 1"))
+                .andExpect(jsonPath("$.content[0].url").value("Url 1"))
+                .andExpect(jsonPath("$.content[1].id").value(2L))
+                .andExpect(jsonPath("$.content[1].title").value("Title 2"))
+                .andExpect(jsonPath("$.content[1].difficulty").value("EASY"))
+                .andExpect(jsonPath("$.content[1].algorithm").value("Algorithm 2"))
+                .andExpect(jsonPath("$.content[1].solved").value(true))
+                .andExpect(jsonPath("$.content[1].notes").value("Notes 2"))
+                .andExpect(jsonPath("$.content[1].url").value("Url 2"))
+                .andExpect(jsonPath("$.page").value(2))
+                .andExpect(jsonPath("$.size").value(5))
+                .andExpect(jsonPath("$.totalElements").value(5))
+                .andExpect(jsonPath("$.totalPages").value(1));
 
-        verify(problemService).getProblems(Difficulty.EASY, true);
+        verify(problemService).getProblems(eq(Difficulty.EASY), eq(true), pageableCaptor.capture());
+
+        Pageable capturedPageable = pageableCaptor.getValue();
+
+        assertEquals(2, capturedPageable.getPageNumber());
+        assertEquals(5, capturedPageable.getPageSize());
     }
 
     @Test
-    void getProblemsShouldReturn200AndEmptyListWhenNoProblemMatchDifficultyAndSolved() throws Exception {
-        when(problemService.getProblems(Difficulty.HARD, false)).thenReturn(Collections.emptyList());
+    void getProblemsShouldReturn200AndEmptyListWhenNoProblemsMatchDifficultyAndSolved() throws Exception {
+        PageResponse<ProblemResponse> response = new PageResponse<>(
+                Collections.emptyList(),
+                0,
+                2,
+                0,
+                0
+        );
 
-        mockMvc.perform(get("/problems?difficulty=HARD&solved=false"))
+        when(problemService.getProblems(eq(Difficulty.HARD), eq(false), any(Pageable.class))).thenReturn(response);
+
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+
+        mockMvc.perform(get("/problems?difficulty=HARD&solved=false&page=0&size=2"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$", hasSize(0)));
+                .andExpect(jsonPath("$.content", hasSize(0)))
+                .andExpect(jsonPath("$.page").value(0))
+                .andExpect(jsonPath("$.size").value(2))
+                .andExpect(jsonPath("$.totalElements").value(0))
+                .andExpect(jsonPath("$.totalPages").value(0));
 
-        verify(problemService).getProblems(Difficulty.HARD, false);
+        verify(problemService).getProblems(eq(Difficulty.HARD), eq(false), pageableCaptor.capture());
+
+        Pageable capturedPageable = pageableCaptor.getValue();
+
+        assertEquals(0, capturedPageable.getPageNumber());
+        assertEquals(2, capturedPageable.getPageSize());
     }
 
     @Test

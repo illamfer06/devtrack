@@ -1,6 +1,7 @@
 package com.devtrack.backend.service;
 
 import com.devtrack.backend.dto.CreateProblemRequest;
+import com.devtrack.backend.dto.PageResponse;
 import com.devtrack.backend.dto.ProblemResponse;
 import com.devtrack.backend.dto.UpdateProblemRequest;
 import com.devtrack.backend.exception.ProblemNotFoundException;
@@ -13,7 +14,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.*;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -21,8 +22,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.never;
@@ -79,72 +79,7 @@ class ProblemServiceTest {
     }
 
     @Test
-    void getAllProblemsShouldReturnAllProblems() {
-        List<Problem> problems = new ArrayList<>();
-
-        problems.add(new Problem(
-                1L,
-                "Title 1",
-                Difficulty.EASY,
-                "Algorithm 1",
-                true,
-                "Notes 1",
-                "Url 1"
-        ));
-
-        problems.add(new Problem(
-                2L,
-                "Title 2",
-                Difficulty.HARD,
-                "Algorithm 2",
-                false,
-                "Notes 2",
-                 "Url 2"
-        ));
-
-        when(problemRepository.findAll(Sort.by("id"))).thenReturn(problems);
-
-        List<ProblemResponse> problemResponses = problemService.getAllProblems();
-
-        assertEquals(2, problemResponses.size());
-
-        ProblemResponse problemResponse1 = problemResponses.getFirst();
-
-        assertEquals(1L, problemResponse1.getId());
-        assertEquals("Title 1", problemResponse1.getTitle());
-        assertEquals(Difficulty.EASY, problemResponse1.getDifficulty());
-        assertEquals("Algorithm 1", problemResponse1.getAlgorithm());
-        assertTrue(problemResponse1.isSolved());
-        assertEquals("Notes 1", problemResponse1.getNotes());
-        assertEquals("Url 1", problemResponse1.getUrl());
-
-        ProblemResponse problemResponse2 = problemResponses.get(1);
-
-        assertEquals(2L, problemResponse2.getId());
-        assertEquals("Title 2", problemResponse2.getTitle());
-        assertEquals(Difficulty.HARD, problemResponse2.getDifficulty());
-        assertEquals("Algorithm 2", problemResponse2.getAlgorithm());
-        assertFalse(problemResponse2.isSolved());
-        assertEquals("Notes 2", problemResponse2.getNotes());
-        assertEquals("Url 2", problemResponse2.getUrl());
-
-        verify(problemRepository).findAll(Sort.by("id"));
-    }
-
-    @Test
-    void getAllProblemsShouldReturnEmptyListWhenRepositoryIsEmpty() {
-
-        when(problemRepository.findAll(Sort.by("id"))).thenReturn(Collections.emptyList());
-
-        List<ProblemResponse> problemResponses = problemService.getAllProblems();
-
-        assertTrue(problemResponses.isEmpty());
-
-        verify(problemRepository).findAll(Sort.by("id"));
-    }
-
-    @Test
-    void getProblemsShouldReturnAllProblemsWhenDifficultyAndSolvedAreNull() {
+    void getProblemsShouldReturnPagedProblemsWhenNoFiltersAreProvided() {
         List<Problem> problems = new ArrayList<>();
 
         problems.add(new Problem(
@@ -167,13 +102,17 @@ class ProblemServiceTest {
                 "Url 2"
         ));
 
-        when(problemRepository.findAll(Sort.by("id"))).thenReturn(problems);
+        Pageable pageable = PageRequest.of(0, 2);
 
-        List<ProblemResponse> problemResponses = problemService.getProblems(null, null);
+        Page<Problem> page = new PageImpl<>(problems, pageable, 5);
 
-        assertEquals(2, problemResponses.size());
+        when(problemRepository.findAll(pageable)).thenReturn(page);
 
-        ProblemResponse problemResponse1 = problemResponses.getFirst();
+        PageResponse<ProblemResponse> response = problemService.getProblems(null, null, pageable);
+
+        assertEquals(2, response.getContent().size());
+
+        ProblemResponse problemResponse1 = response.getContent().getFirst();
 
         assertEquals(1L, problemResponse1.getId());
         assertEquals("Title 1", problemResponse1.getTitle());
@@ -183,7 +122,7 @@ class ProblemServiceTest {
         assertEquals("Notes 1", problemResponse1.getNotes());
         assertEquals("Url 1", problemResponse1.getUrl());
 
-        ProblemResponse problemResponse2 = problemResponses.get(1);
+        ProblemResponse problemResponse2 = response.getContent().get(1);
 
         assertEquals(2L, problemResponse2.getId());
         assertEquals("Title 2", problemResponse2.getTitle());
@@ -193,14 +132,19 @@ class ProblemServiceTest {
         assertEquals("Notes 2", problemResponse2.getNotes());
         assertEquals("Url 2", problemResponse2.getUrl());
 
-        verify(problemRepository).findAll(Sort.by("id"));
-        verify(problemRepository, never()).findByDifficulty(any());
-        verify(problemRepository, never()).findBySolved(anyBoolean());
-        verify(problemRepository, never()).findByDifficultyAndSolved(any(Difficulty.class), anyBoolean());
+        assertEquals(0, response.getPage());
+        assertEquals(2, response.getSize());
+        assertEquals(5, response.getTotalElements());
+        assertEquals(3, response.getTotalPages());
+
+        verify(problemRepository).findAll(pageable);
+        verify(problemRepository, never()).findByDifficulty(any(Difficulty.class), eq(pageable));
+        verify(problemRepository, never()).findBySolved(anyBoolean(), eq(pageable));
+        verify(problemRepository, never()).findByDifficultyAndSolved(any(Difficulty.class), anyBoolean(), eq(pageable));
     }
 
     @Test
-    void getProblemsShouldReturnOnlyProblemsWithGivenDifficulty() {
+    void getProblemsShouldReturnPagedProblemsFilteringByDifficulty() {
         List<Problem> problems = new ArrayList<>();
 
         problems.add(new Problem(
@@ -223,13 +167,17 @@ class ProblemServiceTest {
                 "Url 2"
         ));
 
-        when(problemRepository.findByDifficulty(Difficulty.EASY)).thenReturn(problems);
+        Pageable pageable = PageRequest.of(0, 2);
 
-        List<ProblemResponse> problemResponses = problemService.getProblems(Difficulty.EASY, null);
+        Page<Problem> page = new PageImpl<>(problems, pageable, 5);
 
-        assertEquals(2, problemResponses.size());
+        when(problemRepository.findByDifficulty(Difficulty.EASY, pageable)).thenReturn(page);
 
-        ProblemResponse problemResponse1 = problemResponses.getFirst();
+        PageResponse<ProblemResponse> response = problemService.getProblems(Difficulty.EASY, null, pageable);
+
+        assertEquals(2, response.getContent().size());
+
+        ProblemResponse problemResponse1 = response.getContent().getFirst();
 
         assertEquals(1L, problemResponse1.getId());
         assertEquals("Title 1", problemResponse1.getTitle());
@@ -239,7 +187,7 @@ class ProblemServiceTest {
         assertEquals("Notes 1", problemResponse1.getNotes());
         assertEquals("Url 1", problemResponse1.getUrl());
 
-        ProblemResponse problemResponse2 = problemResponses.get(1);
+        ProblemResponse problemResponse2 = response.getContent().get(1);
 
         assertEquals(2L, problemResponse2.getId());
         assertEquals("Title 2", problemResponse2.getTitle());
@@ -249,14 +197,19 @@ class ProblemServiceTest {
         assertEquals("Notes 2", problemResponse2.getNotes());
         assertEquals("Url 2", problemResponse2.getUrl());
 
-        verify(problemRepository).findByDifficulty(Difficulty.EASY);
-        verify(problemRepository, never()).findAll(any(Sort.class));
-        verify(problemRepository, never()).findBySolved(anyBoolean());
-        verify(problemRepository, never()).findByDifficultyAndSolved(any(Difficulty.class), anyBoolean());
+        assertEquals(0, response.getPage());
+        assertEquals(2, response.getSize());
+        assertEquals(5, response.getTotalElements());
+        assertEquals(3, response.getTotalPages());
+
+        verify(problemRepository).findByDifficulty(eq(Difficulty.EASY), eq(pageable));
+        verify(problemRepository, never()).findAll(pageable);
+        verify(problemRepository, never()).findBySolved(anyBoolean(), eq(pageable));
+        verify(problemRepository, never()).findByDifficultyAndSolved(any(Difficulty.class), anyBoolean(), eq(pageable));
     }
 
     @Test
-    void getProblemsShouldReturnOnlyProblemsWithGivenSolved() {
+    void getProblemsShouldReturnPagedProblemsFilteringBySolved() {
         List<Problem> problems = new ArrayList<>();
 
         problems.add(new Problem(
@@ -279,13 +232,17 @@ class ProblemServiceTest {
                 "Url 2"
         ));
 
-        when(problemRepository.findBySolved(true)).thenReturn(problems);
+        Pageable pageable = PageRequest.of(0, 2);
 
-        List<ProblemResponse> problemResponses = problemService.getProblems(null, true);
+        Page<Problem> page = new PageImpl<>(problems, pageable, 5);
 
-        assertEquals(2, problemResponses.size());
+        when(problemRepository.findBySolved(true, pageable)).thenReturn(page);
 
-        ProblemResponse problemResponse1 = problemResponses.getFirst();
+        PageResponse<ProblemResponse> response = problemService.getProblems(null, true, pageable);
+
+        assertEquals(2, response.getContent().size());
+
+        ProblemResponse problemResponse1 = response.getContent().getFirst();
 
         assertEquals(1L, problemResponse1.getId());
         assertEquals("Title 1", problemResponse1.getTitle());
@@ -295,7 +252,7 @@ class ProblemServiceTest {
         assertEquals("Notes 1", problemResponse1.getNotes());
         assertEquals("Url 1", problemResponse1.getUrl());
 
-        ProblemResponse problemResponse2 = problemResponses.get(1);
+        ProblemResponse problemResponse2 = response.getContent().get(1);
 
         assertEquals(2L, problemResponse2.getId());
         assertEquals("Title 2", problemResponse2.getTitle());
@@ -305,14 +262,19 @@ class ProblemServiceTest {
         assertEquals("Notes 2", problemResponse2.getNotes());
         assertEquals("Url 2", problemResponse2.getUrl());
 
-        verify(problemRepository).findBySolved(true);
-        verify(problemRepository, never()).findAll(any(Sort.class));
-        verify(problemRepository, never()).findByDifficulty(any(Difficulty.class));
-        verify(problemRepository, never()).findByDifficultyAndSolved(any(Difficulty.class), anyBoolean());
+        assertEquals(0, response.getPage());
+        assertEquals(2, response.getSize());
+        assertEquals(5, response.getTotalElements());
+        assertEquals(3, response.getTotalPages());
+
+        verify(problemRepository).findBySolved(eq(true), eq(pageable));
+        verify(problemRepository, never()).findAll(pageable);
+        verify(problemRepository, never()).findByDifficulty(any(Difficulty.class), eq(pageable));
+        verify(problemRepository, never()).findByDifficultyAndSolved(any(Difficulty.class), anyBoolean(), eq(pageable));
     }
 
     @Test
-    void getProblemsShouldReturnOnlyProblemsWithGivenDifficultyAndSolved() {
+    void getProblemsShouldReturnPagedProblemsFilteringByDifficultyAndSolved() {
         List<Problem> problems = new ArrayList<>();
 
         problems.add(new Problem(
@@ -335,13 +297,17 @@ class ProblemServiceTest {
                 "Url 2"
         ));
 
-        when(problemRepository.findByDifficultyAndSolved(Difficulty.EASY, true)).thenReturn(problems);
+        Pageable pageable = PageRequest.of(0, 2);
 
-        List<ProblemResponse> problemResponses = problemService.getProblems(Difficulty.EASY, true);
+        Page<Problem> page = new PageImpl<>(problems, pageable, 5);
 
-        assertEquals(2, problemResponses.size());
+        when(problemRepository.findByDifficultyAndSolved(Difficulty.EASY, true, pageable)).thenReturn(page);
 
-        ProblemResponse problemResponse1 = problemResponses.getFirst();
+        PageResponse<ProblemResponse> response = problemService.getProblems(Difficulty.EASY, true, pageable);
+
+        assertEquals(2, response.getContent().size());
+
+        ProblemResponse problemResponse1 = response.getContent().getFirst();
 
         assertEquals(1L, problemResponse1.getId());
         assertEquals("Title 1", problemResponse1.getTitle());
@@ -351,7 +317,7 @@ class ProblemServiceTest {
         assertEquals("Notes 1", problemResponse1.getNotes());
         assertEquals("Url 1", problemResponse1.getUrl());
 
-        ProblemResponse problemResponse2 = problemResponses.get(1);
+        ProblemResponse problemResponse2 = response.getContent().get(1);
 
         assertEquals(2L, problemResponse2.getId());
         assertEquals("Title 2", problemResponse2.getTitle());
@@ -361,10 +327,15 @@ class ProblemServiceTest {
         assertEquals("Notes 2", problemResponse2.getNotes());
         assertEquals("Url 2", problemResponse2.getUrl());
 
-        verify(problemRepository).findByDifficultyAndSolved(Difficulty.EASY, true);
-        verify(problemRepository, never()).findAll(any(Sort.class));
-        verify(problemRepository, never()).findByDifficulty(any(Difficulty.class));
-        verify(problemRepository, never()).findBySolved(anyBoolean());
+        assertEquals(0, response.getPage());
+        assertEquals(2, response.getSize());
+        assertEquals(5, response.getTotalElements());
+        assertEquals(3, response.getTotalPages());
+
+        verify(problemRepository).findByDifficultyAndSolved(eq(Difficulty.EASY), eq(true), eq(pageable));
+        verify(problemRepository, never()).findAll(pageable);
+        verify(problemRepository, never()).findByDifficulty(any(Difficulty.class), eq(pageable));
+        verify(problemRepository, never()).findBySolved(anyBoolean(), eq(pageable));
     }
 
     @Test

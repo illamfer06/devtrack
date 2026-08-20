@@ -40,17 +40,6 @@ public class ProblemService {
         return toProblemResponse(savedProblem);
     }
 
-    public List<ProblemResponse> getAllProblems() {
-        List<Problem> problems = problemRepository.findAll(Sort.by("id"));
-        List<ProblemResponse> problemResponses = new ArrayList<>();
-
-        for (Problem problem : problems) {
-            problemResponses.add(toProblemResponse(problem));
-        }
-
-        return problemResponses;
-    }
-
     public ProblemResponse getProblemById(Long id) {
         Problem problem = findProblemById(id);
 
