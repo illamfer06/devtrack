@@ -85,10 +85,6 @@ GET http://localhost:8080/problems?solved=true
 
 GET http://localhost:8080/problems?solved=invalid
 
-### Get Problems by Difficulty and Solved
-
-GET http://localhost:8080/problems?difficulty=EASY&solved=false
-
 ### Get Problems paginated
 
 GET http://localhost:8080/problems?page=0&size=3
@@ -100,6 +96,10 @@ GET http://localhost:8080/problems?page=0&size=10&sort=id,asc
 ### Order by id descending
 
 GET http://localhost:8080/problems?page=0&size=10&sort=id,desc
+
+### Get Problems by Difficulty and Solved paginated order by id ascending
+
+GET http://localhost:8080/problems?difficulty=EASY&solved=false&page=0&size=2&sort=id,asc
 
 ### Update problem
 

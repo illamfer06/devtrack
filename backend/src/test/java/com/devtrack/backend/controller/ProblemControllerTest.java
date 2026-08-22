@@ -13,6 +13,7 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.http.MediaType;
@@ -21,6 +22,7 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.hamcrest.Matchers.hasSize;
+import static org.hibernate.validator.internal.util.Contracts.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -478,6 +480,64 @@ class ProblemControllerTest {
 
         assertEquals(0, capturedPageable.getPageNumber());
         assertEquals(2, capturedPageable.getPageSize());
+    }
+
+    @Test
+    void getProblemsShouldReturn200WhenSortingByIdDescending() throws Exception {
+        ProblemResponse problemResponse1 = new ProblemResponse(
+                1L,
+                "Title1",
+                Difficulty.EASY,
+                "Algorithm1",
+                false,
+                "Notes1",
+                "Url1"
+        );
+
+        ProblemResponse problemResponse2 = new ProblemResponse(
+                2L,
+                "Title2",
+                Difficulty.MEDIUM,
+                "Algorithm2",
+                false,
+                "Notes2",
+                "Url2"
+        );
+
+        PageResponse<ProblemResponse> response = new PageResponse<>(
+                List.of(problemResponse2, problemResponse1),
+                0,
+                2,
+                4,
+                2
+        );
+
+        when(problemService.getProblems(isNull(), isNull(), any(Pageable.class))).thenReturn(response);
+
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+
+        mockMvc.perform(get("/problems?page=0&size=2&sort=id,desc"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content", hasSize(2)))
+                .andExpect(jsonPath("$.content[0].id").value(2L))
+                .andExpect(jsonPath("$.content[1].id").value(1L))
+                .andExpect(jsonPath("$.page").value(0))
+                .andExpect(jsonPath("$.size").value(2))
+                .andExpect(jsonPath("$.totalElements").value(4))
+                .andExpect(jsonPath("$.totalPages").value(2));
+
+        verify(problemService).getProblems(isNull(), isNull(), pageableCaptor.capture());
+
+        Pageable capturedPageable = pageableCaptor.getValue();
+
+        assertEquals(0, capturedPageable.getPageNumber());
+        assertEquals(2, capturedPageable.getPageSize());
+
+        Sort.Order order = capturedPageable.getSort().getOrderFor("id");
+
+        assertNotNull(order);
+        assertEquals(Sort.Direction.DESC, order.getDirection());
     }
 
     @Test
