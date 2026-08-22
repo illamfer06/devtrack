@@ -2,6 +2,8 @@ package com.devtrack.backend.dto;
 
 import com.devtrack.backend.model.Difficulty;
 
+import java.time.LocalDateTime;
+
 public class ProblemResponse {
 
     private Long id;
@@ -11,6 +13,8 @@ public class ProblemResponse {
     private boolean solved;
     private String notes;
     private String url;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 
     public ProblemResponse(
             Long id,
@@ -19,7 +23,9 @@ public class ProblemResponse {
             String algorithm,
             boolean solved,
             String notes,
-            String url) {
+            String url,
+            LocalDateTime createdAt,
+            LocalDateTime updatedAt) {
 
         this.id = id;
         this.title = title;
@@ -28,6 +34,8 @@ public class ProblemResponse {
         this.solved = solved;
         this.notes = notes;
         this.url = url;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
     }
 
     public Long getId() {
@@ -49,4 +57,6 @@ public class ProblemResponse {
     public String getUrl() {
         return url;
     }
+    public LocalDateTime getCreatedAt() {return createdAt;}
+    public LocalDateTime getUpdatedAt() {return updatedAt;}
 }

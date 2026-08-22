@@ -20,6 +20,11 @@ public class Problem {
     private boolean solved;
     private String notes;
     private String url;
+    @CreationTimestamp
+    @Column(updatable = false)
+    private LocalDateTime createdAt;
+    @UpdateTimestamp
+    private LocalDateTime updatedAt;
 
     public Problem(){}
 
@@ -78,6 +83,8 @@ public class Problem {
     public String getUrl() {
         return this.url;
     }
+    public LocalDateTime getCreatedAt() { return this.createdAt;}
+    public LocalDateTime getUpdatedAt() { return this.updatedAt;}
 
     public void setTitle(String title) {this.title = title;}
     public void setDifficulty(Difficulty difficulty) {

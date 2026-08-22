@@ -103,7 +103,7 @@ GET http://localhost:8080/problems?difficulty=EASY&solved=false&page=0&size=2&so
 
 ### Update problem
 
-PUT http://localhost:8080/problems/3
+PUT http://localhost:8080/problems/17
 Content-Type: application/json
 Accept: application/json
 

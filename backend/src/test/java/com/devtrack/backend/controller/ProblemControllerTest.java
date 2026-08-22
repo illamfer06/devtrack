@@ -18,11 +18,12 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.http.MediaType;
 
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 
 import static org.hamcrest.Matchers.hasSize;
-import static org.hibernate.validator.internal.util.Contracts.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -46,6 +47,12 @@ class ProblemControllerTest {
 
     @Test
     void getProblemsShouldReturn200WhenProblemsExist() throws Exception {
+        LocalDateTime createdAt1 = LocalDateTime.of(2026, 8, 22, 18, 0);
+        LocalDateTime updatedAt1 = LocalDateTime.of(2026, 8, 22, 18, 30);
+
+        LocalDateTime createdAt2 = LocalDateTime.of(2026, 8, 21, 17, 0);
+        LocalDateTime updatedAt2 = LocalDateTime.of(2026, 8, 22, 12, 15);
+
         ProblemResponse problemResponse1 = new ProblemResponse(
                 1L,
                 "Title 1",
@@ -53,7 +60,9 @@ class ProblemControllerTest {
                 "Algorithm 1",
                 true,
                 "Notes 1",
-                "Url 1"
+                "Url 1",
+                createdAt1,
+                updatedAt1
         );
 
         ProblemResponse problemResponse2 = new ProblemResponse(
@@ -63,7 +72,9 @@ class ProblemControllerTest {
                 "Algorithm 2",
                 false,
                 "Notes 2",
-                "Url 2"
+                "Url 2",
+                createdAt2,
+                updatedAt2
         );
 
         PageResponse<ProblemResponse> response = new PageResponse<>(
@@ -87,6 +98,8 @@ class ProblemControllerTest {
                 .andExpect(jsonPath("$.content[0].solved").value(true))
                 .andExpect(jsonPath("$.content[0].notes").value("Notes 1"))
                 .andExpect(jsonPath("$.content[0].url").value("Url 1"))
+                .andExpect(jsonPath("$.content[0].createdAt").value("2026-08-22T18:00:00"))
+                .andExpect(jsonPath("$.content[0].updatedAt").value("2026-08-22T18:30:00"))
                 .andExpect(jsonPath("$.content[1].id").value(2L))
                 .andExpect(jsonPath("$.content[1].title").value("Title 2"))
                 .andExpect(jsonPath("$.content[1].difficulty").value("HARD"))
@@ -94,6 +107,8 @@ class ProblemControllerTest {
                 .andExpect(jsonPath("$.content[1].solved").value(false))
                 .andExpect(jsonPath("$.content[1].notes").value("Notes 2"))
                 .andExpect(jsonPath("$.content[1].url").value("Url 2"))
+                .andExpect(jsonPath("$.content[1].createdAt").value("2026-08-21T17:00:00"))
+                .andExpect(jsonPath("$.content[1].updatedAt").value("2026-08-22T12:15:00"))
                 .andExpect(jsonPath("$.page").value(0))
                 .andExpect(jsonPath("$.size").value(2))
                 .andExpect(jsonPath("$.totalElements").value(5))
@@ -128,6 +143,9 @@ class ProblemControllerTest {
 
     @Test
     void getProblemsByIdShouldReturn200WhenProblemExists() throws Exception {
+        LocalDateTime createdAt = LocalDateTime.of(2026, 8, 22, 18, 0);
+        LocalDateTime updatedAt = LocalDateTime.of(2026, 8, 22, 18, 30);
+
         ProblemResponse problemResponse = new ProblemResponse(
                 1L,
                 "Title",
@@ -135,7 +153,9 @@ class ProblemControllerTest {
                 "Algorithm",
                 true,
                 "Notes",
-                "Url"
+                "Url",
+                createdAt,
+                updatedAt
         );
 
         when(problemService.getProblemById(1L)).thenReturn(problemResponse);
@@ -149,7 +169,9 @@ class ProblemControllerTest {
                 .andExpect(jsonPath("$.algorithm").value("Algorithm"))
                 .andExpect(jsonPath("$.solved").value(true))
                 .andExpect(jsonPath("$.notes").value("Notes"))
-                .andExpect(jsonPath("$.url").value("Url"));
+                .andExpect(jsonPath("$.url").value("Url"))
+                .andExpect(jsonPath("$.createdAt").value("2026-08-22T18:00:00"))
+                .andExpect(jsonPath("$.updatedAt").value("2026-08-22T18:30:00"));
 
         verify(problemService).getProblemById(1L);
     }
@@ -172,6 +194,12 @@ class ProblemControllerTest {
 
     @Test
     void getProblemsShouldReturn200WhenFilteringByDifficulty() throws Exception {
+        LocalDateTime createdAt1 = LocalDateTime.of(2026, 8, 22, 18, 0);
+        LocalDateTime updatedAt1 = LocalDateTime.of(2026, 8, 22, 18, 30);
+
+        LocalDateTime createdAt2 = LocalDateTime.of(2026, 8, 21, 17, 0);
+        LocalDateTime updatedAt2 = LocalDateTime.of(2026, 8, 22, 12, 15);
+
         ProblemResponse problemResponse1 = new ProblemResponse(
                 1L,
                 "Title 1",
@@ -179,7 +207,9 @@ class ProblemControllerTest {
                 "Algorithm 1",
                 true,
                 "Notes 1",
-                "Url 1"
+                "Url 1",
+                createdAt1,
+                updatedAt1
         );
 
         ProblemResponse problemResponse2 = new ProblemResponse(
@@ -189,7 +219,9 @@ class ProblemControllerTest {
                 "Algorithm 2",
                 false,
                 "Notes 2",
-                "Url 2"
+                "Url 2",
+                createdAt2,
+                updatedAt2
         );
 
         PageResponse<ProblemResponse> response = new PageResponse<>(
@@ -215,6 +247,8 @@ class ProblemControllerTest {
                 .andExpect(jsonPath("$.content[0].solved").value(true))
                 .andExpect(jsonPath("$.content[0].notes").value("Notes 1"))
                 .andExpect(jsonPath("$.content[0].url").value("Url 1"))
+                .andExpect(jsonPath("$.content[0].createdAt").value("2026-08-22T18:00:00"))
+                .andExpect(jsonPath("$.content[0].updatedAt").value("2026-08-22T18:30:00"))
                 .andExpect(jsonPath("$.content[1].id").value(2L))
                 .andExpect(jsonPath("$.content[1].title").value("Title 2"))
                 .andExpect(jsonPath("$.content[1].difficulty").value("EASY"))
@@ -222,6 +256,8 @@ class ProblemControllerTest {
                 .andExpect(jsonPath("$.content[1].solved").value(false))
                 .andExpect(jsonPath("$.content[1].notes").value("Notes 2"))
                 .andExpect(jsonPath("$.content[1].url").value("Url 2"))
+                .andExpect(jsonPath("$.content[1].createdAt").value("2026-08-21T17:00:00"))
+                .andExpect(jsonPath("$.content[1].updatedAt").value("2026-08-22T12:15:00"))
                 .andExpect(jsonPath("$.page").value(0))
                 .andExpect(jsonPath("$.size").value(2))
                 .andExpect(jsonPath("$.totalElements").value(5))
@@ -280,6 +316,12 @@ class ProblemControllerTest {
 
     @Test
     void getProblemsShouldReturn200WhenFilteringBySolved() throws Exception {
+        LocalDateTime createdAt1 = LocalDateTime.of(2026, 8, 22, 18, 0);
+        LocalDateTime updatedAt1 = LocalDateTime.of(2026, 8, 22, 18, 30);
+
+        LocalDateTime createdAt2 = LocalDateTime.of(2026, 8, 21, 17, 0);
+        LocalDateTime updatedAt2 = LocalDateTime.of(2026, 8, 22, 12, 15);
+
         ProblemResponse problemResponse1 = new ProblemResponse(
                 1L,
                 "Title 1",
@@ -287,7 +329,9 @@ class ProblemControllerTest {
                 "Algorithm 1",
                 true,
                 "Notes 1",
-                "Url 1"
+                "Url 1",
+                createdAt1,
+                updatedAt1
         );
 
         ProblemResponse problemResponse2 = new ProblemResponse(
@@ -297,7 +341,9 @@ class ProblemControllerTest {
                 "Algorithm 2",
                 true,
                 "Notes 2",
-                "Url 2"
+                "Url 2",
+                createdAt2,
+                updatedAt2
         );
 
         PageResponse<ProblemResponse> response = new PageResponse<>(
@@ -323,6 +369,8 @@ class ProblemControllerTest {
                 .andExpect(jsonPath("$.content[0].solved").value(true))
                 .andExpect(jsonPath("$.content[0].notes").value("Notes 1"))
                 .andExpect(jsonPath("$.content[0].url").value("Url 1"))
+                .andExpect(jsonPath("$.content[0].createdAt").value("2026-08-22T18:00:00"))
+                .andExpect(jsonPath("$.content[0].updatedAt").value("2026-08-22T18:30:00"))
                 .andExpect(jsonPath("$.content[1].id").value(2L))
                 .andExpect(jsonPath("$.content[1].title").value("Title 2"))
                 .andExpect(jsonPath("$.content[1].difficulty").value("EASY"))
@@ -330,6 +378,8 @@ class ProblemControllerTest {
                 .andExpect(jsonPath("$.content[1].solved").value(true))
                 .andExpect(jsonPath("$.content[1].notes").value("Notes 2"))
                 .andExpect(jsonPath("$.content[1].url").value("Url 2"))
+                .andExpect(jsonPath("$.content[1].createdAt").value("2026-08-21T17:00:00"))
+                .andExpect(jsonPath("$.content[1].updatedAt").value("2026-08-22T12:15:00"))
                 .andExpect(jsonPath("$.page").value(0))
                 .andExpect(jsonPath("$.size").value(2))
                 .andExpect(jsonPath("$.totalElements").value(5))
@@ -388,6 +438,12 @@ class ProblemControllerTest {
 
     @Test
     void getProblemsShouldReturn200WhenFilteringByDifficultyAndSolved() throws Exception {
+        LocalDateTime createdAt1 = LocalDateTime.of(2026, 8, 22, 18, 0);
+        LocalDateTime updatedAt1 = LocalDateTime.of(2026, 8, 22, 18, 30);
+
+        LocalDateTime createdAt2 = LocalDateTime.of(2026, 8, 21, 17, 0);
+        LocalDateTime updatedAt2 = LocalDateTime.of(2026, 8, 22, 12, 15);
+
         ProblemResponse problemResponse1 = new ProblemResponse(
                 1L,
                 "Title 1",
@@ -395,7 +451,9 @@ class ProblemControllerTest {
                 "Algorithm 1",
                 true,
                 "Notes 1",
-                "Url 1"
+                "Url 1",
+                createdAt1,
+                updatedAt1
         );
 
         ProblemResponse problemResponse2 = new ProblemResponse(
@@ -405,15 +463,17 @@ class ProblemControllerTest {
                 "Algorithm 2",
                 true,
                 "Notes 2",
-                "Url 2"
+                "Url 2",
+                createdAt2,
+                updatedAt2
         );
 
         PageResponse<ProblemResponse> response = new PageResponse<>(
                 List.of(problemResponse1, problemResponse2),
                 2,
                 5,
-                5,
-                1
+                15,
+                3
         );
 
         when(problemService.getProblems(eq(Difficulty.EASY), eq(true), any(Pageable.class))).thenReturn(response);
@@ -431,6 +491,8 @@ class ProblemControllerTest {
                 .andExpect(jsonPath("$.content[0].solved").value(true))
                 .andExpect(jsonPath("$.content[0].notes").value("Notes 1"))
                 .andExpect(jsonPath("$.content[0].url").value("Url 1"))
+                .andExpect(jsonPath("$.content[0].createdAt").value("2026-08-22T18:00:00"))
+                .andExpect(jsonPath("$.content[0].updatedAt").value("2026-08-22T18:30:00"))
                 .andExpect(jsonPath("$.content[1].id").value(2L))
                 .andExpect(jsonPath("$.content[1].title").value("Title 2"))
                 .andExpect(jsonPath("$.content[1].difficulty").value("EASY"))
@@ -438,10 +500,12 @@ class ProblemControllerTest {
                 .andExpect(jsonPath("$.content[1].solved").value(true))
                 .andExpect(jsonPath("$.content[1].notes").value("Notes 2"))
                 .andExpect(jsonPath("$.content[1].url").value("Url 2"))
+                .andExpect(jsonPath("$.content[1].createdAt").value("2026-08-21T17:00:00"))
+                .andExpect(jsonPath("$.content[1].updatedAt").value("2026-08-22T12:15:00"))
                 .andExpect(jsonPath("$.page").value(2))
                 .andExpect(jsonPath("$.size").value(5))
-                .andExpect(jsonPath("$.totalElements").value(5))
-                .andExpect(jsonPath("$.totalPages").value(1));
+                .andExpect(jsonPath("$.totalElements").value(15))
+                .andExpect(jsonPath("$.totalPages").value(3));
 
         verify(problemService).getProblems(eq(Difficulty.EASY), eq(true), pageableCaptor.capture());
 
@@ -484,6 +548,12 @@ class ProblemControllerTest {
 
     @Test
     void getProblemsShouldReturn200WhenSortingByIdDescending() throws Exception {
+        LocalDateTime createdAt1 = LocalDateTime.of(2026, 8, 22, 18, 0);
+        LocalDateTime updatedAt1 = LocalDateTime.of(2026, 8, 22, 18, 30);
+
+        LocalDateTime createdAt2 = LocalDateTime.of(2026, 8, 21, 17, 0);
+        LocalDateTime updatedAt2 = LocalDateTime.of(2026, 8, 22, 12, 15);
+
         ProblemResponse problemResponse1 = new ProblemResponse(
                 1L,
                 "Title1",
@@ -491,7 +561,9 @@ class ProblemControllerTest {
                 "Algorithm1",
                 false,
                 "Notes1",
-                "Url1"
+                "Url1",
+                createdAt1,
+                updatedAt1
         );
 
         ProblemResponse problemResponse2 = new ProblemResponse(
@@ -501,7 +573,9 @@ class ProblemControllerTest {
                 "Algorithm2",
                 false,
                 "Notes2",
-                "Url2"
+                "Url2",
+                createdAt2,
+                updatedAt2
         );
 
         PageResponse<ProblemResponse> response = new PageResponse<>(
@@ -551,6 +625,9 @@ class ProblemControllerTest {
         request.setNotes("Notes");
         request.setUrl("Url");
 
+        LocalDateTime createdAt = LocalDateTime.of(2026, 8, 22, 18, 0);
+        LocalDateTime updatedAt = LocalDateTime.of(2026, 8, 22, 18, 30);
+
         ProblemResponse problemResponse = new ProblemResponse(
                 1L,
                 "Title",
@@ -558,7 +635,9 @@ class ProblemControllerTest {
                 "Algorithm",
                 true,
                 "Notes",
-                "Url"
+                "Url",
+                createdAt,
+                updatedAt
         );
 
         when(problemService.createProblem(any(CreateProblemRequest.class))).thenReturn(problemResponse);
@@ -576,7 +655,9 @@ class ProblemControllerTest {
                 .andExpect(jsonPath("$.algorithm").value("Algorithm"))
                 .andExpect(jsonPath("$.solved").value(true))
                 .andExpect(jsonPath("$.notes").value("Notes"))
-                .andExpect(jsonPath("$.url").value("Url"));
+                .andExpect(jsonPath("$.url").value("Url"))
+                .andExpect(jsonPath("$.createdAt").value("2026-08-22T18:00:00"))
+                .andExpect(jsonPath("$.updatedAt").value("2026-08-22T18:30:00"));
 
         ArgumentCaptor<CreateProblemRequest> argumentCaptor = ArgumentCaptor.forClass(CreateProblemRequest.class);
 
@@ -655,6 +736,9 @@ class ProblemControllerTest {
         request.setNotes("Updated Notes");
         request.setUrl("Updated Url");
 
+        LocalDateTime createdAt = LocalDateTime.of(2026, 8, 22, 18, 0);
+        LocalDateTime updatedAt = LocalDateTime.of(2026, 8, 22, 18, 30);
+
         ProblemResponse problemResponse = new ProblemResponse(
                 1L,
                 "Updated Title",
@@ -662,7 +746,9 @@ class ProblemControllerTest {
                 "Updated Algorithm",
                 false,
                 "Updated Notes",
-                "Updated Url"
+                "Updated Url",
+                createdAt,
+                updatedAt
         );
 
         when(problemService.updateProblem(eq(1L), any(UpdateProblemRequest.class))).thenReturn(problemResponse);
@@ -679,7 +765,9 @@ class ProblemControllerTest {
                 .andExpect(jsonPath("$.algorithm").value("Updated Algorithm"))
                 .andExpect(jsonPath("$.solved").value(false))
                 .andExpect(jsonPath("$.notes").value("Updated Notes"))
-                .andExpect(jsonPath("$.url").value("Updated Url"));
+                .andExpect(jsonPath("$.url").value("Updated Url"))
+                .andExpect(jsonPath("$.createdAt").value("2026-08-22T18:00:00"))
+                .andExpect(jsonPath("$.updatedAt").value("2026-08-22T18:30:00"));
 
         ArgumentCaptor<UpdateProblemRequest> argumentCaptor = ArgumentCaptor.forClass(UpdateProblemRequest.class);
 

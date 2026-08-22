@@ -107,7 +107,9 @@ public class ProblemService {
                 problem.getAlgorithm(),
                 problem.isSolved(),
                 problem.getNotes(),
-                problem.getUrl()
+                problem.getUrl(),
+                problem.getCreatedAt(),
+                problem.getUpdatedAt()
         );
     }
 }
