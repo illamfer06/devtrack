@@ -48,6 +48,14 @@ public class GlobalExceptionHandler {
         return createErrorResponse(HttpStatus.NOT_FOUND, exception.getMessage(), request);
     }
 
+    @ExceptionHandler(StudyBlockNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleStudyBlockNotFoundException(
+            StudyBlockNotFoundException exception,
+            HttpServletRequest request) {
+
+        return createErrorResponse(HttpStatus.NOT_FOUND, exception.getMessage(), request);
+    }
+
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ErrorResponse> handleHttpMessageNotReadable(
             HttpMessageNotReadableException exception,

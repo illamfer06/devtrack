@@ -1,12 +1,10 @@
 package com.devtrack.backend.service;
 
-import com.devtrack.backend.dto.CreateProblemRequest;
-import com.devtrack.backend.dto.PageResponse;
-import com.devtrack.backend.dto.ProblemResponse;
-import com.devtrack.backend.dto.UpdateProblemRequest;
+import com.devtrack.backend.dto.*;
 import com.devtrack.backend.exception.ProblemNotFoundException;
 import com.devtrack.backend.model.Difficulty;
 import com.devtrack.backend.model.Problem;
+import com.devtrack.backend.model.StudyBlock;
 import com.devtrack.backend.repository.ProblemRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -35,6 +33,55 @@ class ProblemServiceTest {
 
     @InjectMocks
     private ProblemService problemService;
+
+    @Test
+    void createProblemShouldSaveProblem() {
+
+        CreateProblemRequest request = new CreateProblemRequest();
+
+        request.setTitle("Title");
+        request.setDifficulty(Difficulty.EASY);
+        request.setAlgorithm("Algorithm");
+        request.setSolved(true);
+        request.setNotes("Notes");
+        request.setUrl("Url");
+
+        Problem savedProblem = new Problem (
+                1L,
+                "Title",
+                Difficulty.EASY,
+                "Algorithm",
+                true,
+                "Notes",
+                "Url"
+        );
+
+        when(problemRepository.save(any(Problem.class))).thenReturn(savedProblem);
+
+        ProblemResponse problemResponse = problemService.createProblem(request);
+
+        assertEquals(1L, problemResponse.getId());
+        assertEquals("Title", problemResponse.getTitle());
+        assertEquals(Difficulty.EASY, problemResponse.getDifficulty());
+        assertEquals("Algorithm", problemResponse.getAlgorithm());
+        assertTrue(problemResponse.isSolved());
+        assertEquals("Notes", problemResponse.getNotes());
+        assertEquals("Url", problemResponse.getUrl());
+
+        ArgumentCaptor<Problem> problemCaptor = ArgumentCaptor.forClass(Problem.class);
+
+        verify(problemRepository).save(problemCaptor.capture());
+
+        Problem problemToSave = problemCaptor.getValue();
+
+        assertNull(problemToSave.getId());
+        assertEquals("Title", problemToSave.getTitle());
+        assertEquals(Difficulty.EASY, problemToSave.getDifficulty());
+        assertEquals("Algorithm", problemToSave.getAlgorithm());
+        assertTrue(problemToSave.isSolved());
+        assertEquals("Notes", problemToSave.getNotes());
+        assertEquals("Url", problemToSave.getUrl());
+    }
 
     @Test
     void getProblemByIdShouldReturnProblemWhenProblemExists() {
@@ -136,6 +183,28 @@ class ProblemServiceTest {
         assertEquals(2, response.getSize());
         assertEquals(5, response.getTotalElements());
         assertEquals(3, response.getTotalPages());
+
+        verify(problemRepository).findAll(pageable);
+        verify(problemRepository, never()).findByDifficulty(any(Difficulty.class), eq(pageable));
+        verify(problemRepository, never()).findBySolved(anyBoolean(), eq(pageable));
+        verify(problemRepository, never()).findByDifficultyAndSolved(any(Difficulty.class), anyBoolean(), eq(pageable));
+    }
+
+    @Test
+    void getSProblemsShouldReturnEmptyPageWhenNoProblemsExist() {
+        Pageable pageable = PageRequest.of(0, 2);
+
+        Page<Problem> page = new PageImpl<>(Collections.emptyList(), pageable, 0);
+
+        when(problemRepository.findAll(pageable)).thenReturn(page);
+
+        PageResponse<ProblemResponse> response = problemService.getProblems(null, null, pageable);
+
+        assertTrue(response.getContent().isEmpty());
+        assertEquals(0, response.getPage());
+        assertEquals(2, response.getSize());
+        assertEquals(0, response.getTotalElements());
+        assertEquals(0, response.getTotalPages());
 
         verify(problemRepository).findAll(pageable);
         verify(problemRepository, never()).findByDifficulty(any(Difficulty.class), eq(pageable));
@@ -336,55 +405,6 @@ class ProblemServiceTest {
         verify(problemRepository, never()).findAll(pageable);
         verify(problemRepository, never()).findByDifficulty(any(Difficulty.class), eq(pageable));
         verify(problemRepository, never()).findBySolved(anyBoolean(), eq(pageable));
-    }
-
-    @Test
-    void createProblemShouldSaveProblem() {
-
-        CreateProblemRequest request = new CreateProblemRequest();
-
-        request.setTitle("Title");
-        request.setDifficulty(Difficulty.EASY);
-        request.setAlgorithm("Algorithm");
-        request.setSolved(true);
-        request.setNotes("Notes");
-        request.setUrl("Url");
-
-        Problem savedProblem = new Problem (
-                1L,
-                "Title",
-                Difficulty.EASY,
-                "Algorithm",
-                true,
-                "Notes",
-                "Url"
-        );
-
-        when(problemRepository.save(any(Problem.class))).thenReturn(savedProblem);
-
-        ProblemResponse problemResponse = problemService.createProblem(request);
-
-        assertEquals(1L, problemResponse.getId());
-        assertEquals("Title", problemResponse.getTitle());
-        assertEquals(Difficulty.EASY, problemResponse.getDifficulty());
-        assertEquals("Algorithm", problemResponse.getAlgorithm());
-        assertTrue(problemResponse.isSolved());
-        assertEquals("Notes", problemResponse.getNotes());
-        assertEquals("Url", problemResponse.getUrl());
-
-        ArgumentCaptor<Problem> problemCaptor = ArgumentCaptor.forClass(Problem.class);
-
-        verify(problemRepository).save(problemCaptor.capture());
-
-        Problem problemToSave = problemCaptor.getValue();
-
-        assertNull(problemToSave.getId());
-        assertEquals("Title", problemToSave.getTitle());
-        assertEquals(Difficulty.EASY, problemToSave.getDifficulty());
-        assertEquals("Algorithm", problemToSave.getAlgorithm());
-        assertTrue(problemToSave.isSolved());
-        assertEquals("Notes", problemToSave.getNotes());
-        assertEquals("Url", problemToSave.getUrl());
     }
 
     @Test
