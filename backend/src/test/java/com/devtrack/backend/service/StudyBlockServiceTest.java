@@ -36,10 +36,10 @@ class StudyBlockServiceTest {
     @Test
     void createStudyBlockShouldSaveStudyBlock() {
 
-        CreateStudyBlockRequest request = new CreateStudyBlockRequest(
-                "Title",
-                false
-        );
+        CreateStudyBlockRequest request = new CreateStudyBlockRequest();
+
+        request.setTitle("Title");
+        request.setActive(false);
 
         StudyBlock savedStudyBlock = new StudyBlock(
                 1L,

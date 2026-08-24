@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.data.domain.Pageable;
 
 import java.net.URI;
-import java.util.List;
 
 @RestController
 @RequestMapping("/problems")
@@ -23,6 +22,14 @@ public class ProblemController {
 
     public ProblemController(ProblemService problemService) {
         this.problemService = problemService;
+    }
+
+    @PostMapping
+    public ResponseEntity<ProblemResponse> createProblem(@Valid @RequestBody CreateProblemRequest request) {
+        ProblemResponse createdProblem = problemService.createProblem(request);
+        URI location = URI.create("/problems/" + createdProblem.getId());
+
+        return ResponseEntity.created(location).body(createdProblem);
     }
 
     @GetMapping
@@ -37,14 +44,6 @@ public class ProblemController {
     @GetMapping("/{id}")
     public ProblemResponse getProblemById(@PathVariable Long id) {
         return problemService.getProblemById(id);
-    }
-
-    @PostMapping
-    public ResponseEntity<ProblemResponse> createProblem(@Valid @RequestBody CreateProblemRequest request) {
-        ProblemResponse createdProblem = problemService.createProblem(request);
-        URI location = URI.create("/problems/" + createdProblem.getId());
-
-        return ResponseEntity.created(location).body(createdProblem);
     }
 
     @PutMapping("/{id}")

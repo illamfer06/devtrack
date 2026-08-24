@@ -61,7 +61,7 @@ public class GlobalExceptionHandler {
             HttpMessageNotReadableException exception,
             HttpServletRequest request) {
 
-        return createErrorResponse(HttpStatus.BAD_REQUEST, "Difficulty must be one of: EASY, MEDIUM, HARD", request);
+        return createErrorResponse(HttpStatus.BAD_REQUEST, "Invalid request body", request);
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
@@ -76,6 +76,8 @@ public class GlobalExceptionHandler {
             message = "Difficulty must be one of: EASY, MEDIUM, HARD";
         } else if (nameException.equals("solved")) {
             message = "Solved must be true or false";
+        } else if (nameException.equals("active")) {
+            message = "Active must be true or false";
         } else {
             message = "Invalid request parameter";
         }

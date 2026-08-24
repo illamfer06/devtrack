@@ -46,6 +46,117 @@ class ProblemControllerTest {
     private ProblemService problemService;
 
     @Test
+    void createProblemShouldReturn201WhenRequestIsValid() throws Exception {
+        CreateProblemRequest request = new CreateProblemRequest();
+
+        request.setTitle("Title");
+        request.setDifficulty(Difficulty.EASY);
+        request.setAlgorithm("Algorithm");
+        request.setSolved(true);
+        request.setNotes("Notes");
+        request.setUrl("Url");
+
+        LocalDateTime createdAt = LocalDateTime.of(2026, 8, 22, 18, 0);
+        LocalDateTime updatedAt = LocalDateTime.of(2026, 8, 22, 18, 30);
+
+        ProblemResponse problemResponse = new ProblemResponse(
+                1L,
+                "Title",
+                Difficulty.EASY,
+                "Algorithm",
+                true,
+                "Notes",
+                "Url",
+                createdAt,
+                updatedAt
+        );
+
+        when(problemService.createProblem(any(CreateProblemRequest.class))).thenReturn(problemResponse);
+
+        mockMvc.perform(post("/problems")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(header().string("Location", "/problems/1"))
+                .andExpect(jsonPath("$.id").value(1L))
+                .andExpect(jsonPath("$.title").value("Title"))
+                .andExpect(jsonPath("$.difficulty").value("EASY"))
+                .andExpect(jsonPath("$.algorithm").value("Algorithm"))
+                .andExpect(jsonPath("$.solved").value(true))
+                .andExpect(jsonPath("$.notes").value("Notes"))
+                .andExpect(jsonPath("$.url").value("Url"))
+                .andExpect(jsonPath("$.createdAt").value("2026-08-22T18:00:00"))
+                .andExpect(jsonPath("$.updatedAt").value("2026-08-22T18:30:00"));
+
+        ArgumentCaptor<CreateProblemRequest> argumentCaptor = ArgumentCaptor.forClass(CreateProblemRequest.class);
+
+        verify(problemService).createProblem(argumentCaptor.capture());
+
+        CreateProblemRequest capturedRequest = argumentCaptor.getValue();
+
+        assertEquals("Title", capturedRequest.getTitle());
+        assertEquals(Difficulty.EASY, capturedRequest.getDifficulty());
+        assertEquals("Algorithm", capturedRequest.getAlgorithm());
+        assertTrue(capturedRequest.isSolved());
+        assertEquals("Notes", capturedRequest.getNotes());
+        assertEquals("Url", capturedRequest.getUrl());
+    }
+
+    @Test
+    void createProblemShouldReturn400WhenTitleIsBlank() throws Exception {
+        CreateProblemRequest invalidRequest = new CreateProblemRequest();
+
+        invalidRequest.setTitle("");
+        invalidRequest.setDifficulty(Difficulty.EASY);
+        invalidRequest.setAlgorithm("Algorithm");
+        invalidRequest.setSolved(true);
+        invalidRequest.setNotes("Notes");
+        invalidRequest.setUrl("Url");
+
+        mockMvc.perform(post("/problems")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(invalidRequest)))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad Request"))
+                .andExpect(jsonPath("$.message").value("Title cannot be empty"))
+                .andExpect(jsonPath("$.path").value("/problems"));
+
+        verify(problemService, never()).createProblem(any(CreateProblemRequest.class));
+    }
+
+    @Test
+    void createProblemShouldReturn400WhenDifficultyIsInvalid() throws Exception {
+        String json = """
+                {
+                    "title": "Title",
+                    "difficulty": "IMPOSSIBLE",
+                    "algorithm": "Algorithm",
+                    "solved": true,
+                    "notes": "Notes",
+                    "url": "URL"
+                }
+                """;
+
+        mockMvc.perform(post("/problems")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad Request"))
+                .andExpect(jsonPath("$.message").value("Difficulty must be one of: EASY, MEDIUM, HARD"))
+                .andExpect(jsonPath("$.path").value("/problems"));
+
+        verify(problemService, never()).createProblem(any(CreateProblemRequest.class));
+    }
+
+    @Test
     void getProblemsShouldReturn200WhenProblemsExist() throws Exception {
         LocalDateTime createdAt1 = LocalDateTime.of(2026, 8, 22, 18, 0);
         LocalDateTime updatedAt1 = LocalDateTime.of(2026, 8, 22, 18, 30);
@@ -139,57 +250,6 @@ class ProblemControllerTest {
                 .andExpect(jsonPath("$.totalPages").value(0));
 
         verify(problemService).getProblems(isNull(), isNull(), any(Pageable.class));
-    }
-
-    @Test
-    void getProblemsByIdShouldReturn200WhenProblemExists() throws Exception {
-        LocalDateTime createdAt = LocalDateTime.of(2026, 8, 22, 18, 0);
-        LocalDateTime updatedAt = LocalDateTime.of(2026, 8, 22, 18, 30);
-
-        ProblemResponse problemResponse = new ProblemResponse(
-                1L,
-                "Title",
-                Difficulty.EASY,
-                "Algorithm",
-                true,
-                "Notes",
-                "Url",
-                createdAt,
-                updatedAt
-        );
-
-        when(problemService.getProblemById(1L)).thenReturn(problemResponse);
-
-        mockMvc.perform(get("/problems/{id}", 1L))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.id").value(1L))
-                .andExpect(jsonPath("$.title").value("Title"))
-                .andExpect(jsonPath("$.difficulty").value("EASY"))
-                .andExpect(jsonPath("$.algorithm").value("Algorithm"))
-                .andExpect(jsonPath("$.solved").value(true))
-                .andExpect(jsonPath("$.notes").value("Notes"))
-                .andExpect(jsonPath("$.url").value("Url"))
-                .andExpect(jsonPath("$.createdAt").value("2026-08-22T18:00:00"))
-                .andExpect(jsonPath("$.updatedAt").value("2026-08-22T18:30:00"));
-
-        verify(problemService).getProblemById(1L);
-    }
-
-    @Test
-    void getProblemsByIdShouldReturn404WhenProblemDoesNotExist() throws Exception {
-        when(problemService.getProblemById(99L))
-                .thenThrow(new ProblemNotFoundException("Problem with id 99 was not found"));
-
-        mockMvc.perform(get("/problems/{id}", 99L))
-                .andExpect(status().isNotFound())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.status").value(404))
-                .andExpect(jsonPath("$.error").value("Not Found"))
-                .andExpect(jsonPath("$.message").value("Problem with id 99 was not found"))
-                .andExpect(jsonPath("$.path").value("/problems/99"));
-
-        verify(problemService).getProblemById(99L);
     }
 
     @Test
@@ -615,16 +675,7 @@ class ProblemControllerTest {
     }
 
     @Test
-    void createProblemShouldReturn201WhenRequestIsValid() throws Exception {
-        CreateProblemRequest request = new CreateProblemRequest();
-
-        request.setTitle("Title");
-        request.setDifficulty(Difficulty.EASY);
-        request.setAlgorithm("Algorithm");
-        request.setSolved(true);
-        request.setNotes("Notes");
-        request.setUrl("Url");
-
+    void getProblemsByIdShouldReturn200WhenProblemExists() throws Exception {
         LocalDateTime createdAt = LocalDateTime.of(2026, 8, 22, 18, 0);
         LocalDateTime updatedAt = LocalDateTime.of(2026, 8, 22, 18, 30);
 
@@ -640,15 +691,11 @@ class ProblemControllerTest {
                 updatedAt
         );
 
-        when(problemService.createProblem(any(CreateProblemRequest.class))).thenReturn(problemResponse);
+        when(problemService.getProblemById(1L)).thenReturn(problemResponse);
 
-        mockMvc.perform(post("/problems")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .accept(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isCreated())
+        mockMvc.perform(get("/problems/{id}", 1L))
+                .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(header().string("Location", "/problems/1"))
                 .andExpect(jsonPath("$.id").value(1L))
                 .andExpect(jsonPath("$.title").value("Title"))
                 .andExpect(jsonPath("$.difficulty").value("EASY"))
@@ -659,70 +706,23 @@ class ProblemControllerTest {
                 .andExpect(jsonPath("$.createdAt").value("2026-08-22T18:00:00"))
                 .andExpect(jsonPath("$.updatedAt").value("2026-08-22T18:30:00"));
 
-        ArgumentCaptor<CreateProblemRequest> argumentCaptor = ArgumentCaptor.forClass(CreateProblemRequest.class);
-
-        verify(problemService).createProblem(argumentCaptor.capture());
-
-        CreateProblemRequest capturedRequest = argumentCaptor.getValue();
-
-        assertEquals("Title", capturedRequest.getTitle());
-        assertEquals(Difficulty.EASY, capturedRequest.getDifficulty());
-        assertEquals("Algorithm", capturedRequest.getAlgorithm());
-        assertTrue(capturedRequest.isSolved());
-        assertEquals("Notes", capturedRequest.getNotes());
-        assertEquals("Url", capturedRequest.getUrl());
+        verify(problemService).getProblemById(1L);
     }
 
     @Test
-    void createProblemShouldReturn400WhenTitleIsBlank() throws Exception {
-        CreateProblemRequest invalidRequest = new CreateProblemRequest();
+    void getProblemsByIdShouldReturn404WhenProblemDoesNotExist() throws Exception {
+        when(problemService.getProblemById(99L))
+                .thenThrow(new ProblemNotFoundException("Problem with id 99 was not found"));
 
-        invalidRequest.setTitle("");
-        invalidRequest.setDifficulty(Difficulty.EASY);
-        invalidRequest.setAlgorithm("Algorithm");
-        invalidRequest.setSolved(true);
-        invalidRequest.setNotes("Notes");
-        invalidRequest.setUrl("Url");
-
-        mockMvc.perform(post("/problems")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .accept(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(invalidRequest)))
-                .andExpect(status().isBadRequest())
+        mockMvc.perform(get("/problems/{id}", 99L))
+                .andExpect(status().isNotFound())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.status").value(400))
-                .andExpect(jsonPath("$.error").value("Bad Request"))
-                .andExpect(jsonPath("$.message").value("Title cannot be empty"))
-                .andExpect(jsonPath("$.path").value("/problems"));
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.error").value("Not Found"))
+                .andExpect(jsonPath("$.message").value("Problem with id 99 was not found"))
+                .andExpect(jsonPath("$.path").value("/problems/99"));
 
-        verify(problemService, never()).createProblem(any(CreateProblemRequest.class));
-    }
-
-    @Test
-    void createProblemShouldReturn400WhenDifficultyIsInvalid() throws Exception {
-        String json = """
-                {
-                    "title": "Title",
-                    "difficulty": "IMPOSSIBLE",
-                    "algorithm": "Algorithm",
-                    "solved": true,
-                    "notes": "Notes",
-                    "url": "URL"
-                }
-                """;
-
-        mockMvc.perform(post("/problems")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .accept(MediaType.APPLICATION_JSON)
-                        .content(json))
-                .andExpect(status().isBadRequest())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.status").value(400))
-                .andExpect(jsonPath("$.error").value("Bad Request"))
-                .andExpect(jsonPath("$.message").value("Difficulty must be one of: EASY, MEDIUM, HARD"))
-                .andExpect(jsonPath("$.path").value("/problems"));
-
-        verify(problemService, never()).createProblem(any(CreateProblemRequest.class));
+        verify(problemService).getProblemById(99L);
     }
 
     @Test

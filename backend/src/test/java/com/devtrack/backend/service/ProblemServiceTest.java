@@ -4,7 +4,6 @@ import com.devtrack.backend.dto.*;
 import com.devtrack.backend.exception.ProblemNotFoundException;
 import com.devtrack.backend.model.Difficulty;
 import com.devtrack.backend.model.Problem;
-import com.devtrack.backend.model.StudyBlock;
 import com.devtrack.backend.repository.ProblemRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

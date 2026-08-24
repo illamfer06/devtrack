@@ -10,14 +10,6 @@ public class CreateStudyBlockRequest {
 
     public CreateStudyBlockRequest() {}
 
-    public CreateStudyBlockRequest(
-            String title,
-            boolean active) {
-
-        this.title = title;
-        this.active = active;
-    }
-
     public String getTitle() { return title;}
     public boolean isActive() { return active;}
 
