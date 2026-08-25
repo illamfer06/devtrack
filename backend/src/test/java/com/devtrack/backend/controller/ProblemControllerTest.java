@@ -5,6 +5,7 @@ import com.devtrack.backend.dto.PageResponse;
 import com.devtrack.backend.dto.ProblemResponse;
 import com.devtrack.backend.dto.UpdateProblemRequest;
 import com.devtrack.backend.exception.ProblemNotFoundException;
+import com.devtrack.backend.exception.StudyBlockNotFoundException;
 import com.devtrack.backend.model.Difficulty;
 import com.devtrack.backend.service.ProblemService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -71,15 +72,15 @@ class ProblemControllerTest {
                 updatedAt
         );
 
-        when(problemService.createProblem(any(CreateProblemRequest.class))).thenReturn(problemResponse);
+        when(problemService.createProblem(eq(1L), any(CreateProblemRequest.class))).thenReturn(problemResponse);
 
-        mockMvc.perform(post("/problems")
+        mockMvc.perform(post("/study-blocks/{studyBlockId}/problems", 1L)
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(header().string("Location", "/problems/1"))
+                .andExpect(header().string("Location", "/study-blocks/1/problems/1"))
                 .andExpect(jsonPath("$.id").value(1L))
                 .andExpect(jsonPath("$.title").value("Title"))
                 .andExpect(jsonPath("$.difficulty").value("EASY"))
@@ -92,7 +93,7 @@ class ProblemControllerTest {
 
         ArgumentCaptor<CreateProblemRequest> argumentCaptor = ArgumentCaptor.forClass(CreateProblemRequest.class);
 
-        verify(problemService).createProblem(argumentCaptor.capture());
+        verify(problemService).createProblem(eq(1L), argumentCaptor.capture());
 
         CreateProblemRequest capturedRequest = argumentCaptor.getValue();
 
@@ -115,7 +116,7 @@ class ProblemControllerTest {
         invalidRequest.setNotes("Notes");
         invalidRequest.setUrl("Url");
 
-        mockMvc.perform(post("/problems")
+        mockMvc.perform(post("/study-blocks/{studyBlockId}/problems", 1L)
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(invalidRequest)))
@@ -124,9 +125,9 @@ class ProblemControllerTest {
                 .andExpect(jsonPath("$.status").value(400))
                 .andExpect(jsonPath("$.error").value("Bad Request"))
                 .andExpect(jsonPath("$.message").value("Title cannot be empty"))
-                .andExpect(jsonPath("$.path").value("/problems"));
+                .andExpect(jsonPath("$.path").value("/study-blocks/1/problems"));
 
-        verify(problemService, never()).createProblem(any(CreateProblemRequest.class));
+        verify(problemService, never()).createProblem(eq(1L), any(CreateProblemRequest.class));
     }
 
     @Test
@@ -142,7 +143,7 @@ class ProblemControllerTest {
                 }
                 """;
 
-        mockMvc.perform(post("/problems")
+        mockMvc.perform(post("/study-blocks/{studyBlockId}/problems", 1L)
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON)
                         .content(json))
@@ -150,10 +151,38 @@ class ProblemControllerTest {
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.status").value(400))
                 .andExpect(jsonPath("$.error").value("Bad Request"))
-                .andExpect(jsonPath("$.message").value("Difficulty must be one of: EASY, MEDIUM, HARD"))
-                .andExpect(jsonPath("$.path").value("/problems"));
+                .andExpect(jsonPath("$.message").value("Invalid request body"))
+                .andExpect(jsonPath("$.path").value("/study-blocks/1/problems"));
 
-        verify(problemService, never()).createProblem(any(CreateProblemRequest.class));
+        verify(problemService, never()).createProblem(eq(1L), any(CreateProblemRequest.class));
+    }
+
+    @Test
+    void createProblemShouldReturn404WhenStudyBlockDoesNotExist() throws Exception {
+        CreateProblemRequest request = new CreateProblemRequest();
+
+        request.setTitle("Title");
+        request.setDifficulty(Difficulty.EASY);
+        request.setAlgorithm("Algorithm");
+        request.setSolved(true);
+        request.setNotes("Notes");
+        request.setUrl("Url");
+
+        when(problemService.createProblem(eq(99L), any(CreateProblemRequest.class)))
+                .thenThrow(new StudyBlockNotFoundException("Study block with id 99 was not found"));
+
+        mockMvc.perform(post("/study-blocks/{studyBlockId}/problems", 99L)
+                .contentType(MediaType.APPLICATION_JSON)
+                .accept(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.error").value("Not Found"))
+                .andExpect(jsonPath("$.message").value("Study block with id 99 was not found"))
+                .andExpect(jsonPath("$.path").value("/study-blocks/99/problems"));
+
+        verify(problemService).createProblem(eq(99L), any(CreateProblemRequest.class));
     }
 
     @Test
@@ -196,9 +225,9 @@ class ProblemControllerTest {
                 3
         );
 
-        when(problemService.getProblems(isNull(), isNull(), any(Pageable.class))).thenReturn(response);
+        when(problemService.getProblems(eq(1L), isNull(), isNull(), any(Pageable.class))).thenReturn(response);
 
-        mockMvc.perform(get("/problems"))
+        mockMvc.perform(get("/study-blocks/{studyBlockId}/problems", 1L))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.content", hasSize(2)))
@@ -225,7 +254,7 @@ class ProblemControllerTest {
                 .andExpect(jsonPath("$.totalElements").value(5))
                 .andExpect(jsonPath("$.totalPages").value(3));
 
-        verify(problemService).getProblems(isNull(), isNull(), any(Pageable.class));
+        verify(problemService).getProblems(eq(1L), isNull(), isNull(), any(Pageable.class));
     }
 
     @Test
@@ -238,9 +267,9 @@ class ProblemControllerTest {
                 0
         );
 
-        when(problemService.getProblems(isNull(), isNull(), any(Pageable.class))).thenReturn(response);
+        when(problemService.getProblems(eq(1L), isNull(), isNull(), any(Pageable.class))).thenReturn(response);
 
-        mockMvc.perform(get("/problems?page=0&size=2"))
+        mockMvc.perform(get("/study-blocks/{studyBlockId}/problems?page=0&size=2", 1L))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.content", hasSize(0)))
@@ -249,7 +278,24 @@ class ProblemControllerTest {
                 .andExpect(jsonPath("$.totalElements").value(0))
                 .andExpect(jsonPath("$.totalPages").value(0));
 
-        verify(problemService).getProblems(isNull(), isNull(), any(Pageable.class));
+        verify(problemService).getProblems(eq(1L), isNull(), isNull(), any(Pageable.class));
+    }
+
+    @Test
+    void getProblemsShouldReturn404WhenStudyBlockDoesNotExist() throws Exception {
+
+        when(problemService.getProblems(eq(99L), isNull(), isNull(), any(Pageable.class))).
+                thenThrow(new StudyBlockNotFoundException("Study block with id 99 was not found"));
+
+        mockMvc.perform(get("/study-blocks/{studyBlockId}/problems", 99L))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.error").value("Not Found"))
+                .andExpect(jsonPath("$.message").value("Study block with id 99 was not found"))
+                .andExpect(jsonPath("$.path").value("/study-blocks/99/problems"));
+
+        verify(problemService).getProblems(eq(99L), isNull(), isNull(), any(Pageable.class));
     }
 
     @Test
@@ -292,11 +338,11 @@ class ProblemControllerTest {
                 3
         );
 
-        when(problemService.getProblems(eq(Difficulty.EASY), isNull(), any(Pageable.class))).thenReturn(response);
+        when(problemService.getProblems(eq(1L), eq(Difficulty.EASY), isNull(), any(Pageable.class))).thenReturn(response);
 
         ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
 
-        mockMvc.perform(get("/problems?difficulty=EASY&page=0&size=2"))
+        mockMvc.perform(get("/study-blocks/{studyBlockId}/problems?difficulty=EASY&page=0&size=2", 1L))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.content", hasSize(2)))
@@ -323,7 +369,7 @@ class ProblemControllerTest {
                 .andExpect(jsonPath("$.totalElements").value(5))
                 .andExpect(jsonPath("$.totalPages").value(3));
 
-        verify(problemService).getProblems(eq(Difficulty.EASY), isNull(), pageableCaptor.capture());
+        verify(problemService).getProblems(eq(1L), eq(Difficulty.EASY), isNull(), pageableCaptor.capture());
 
         Pageable capturedPageable = pageableCaptor.getValue();
 
@@ -340,11 +386,11 @@ class ProblemControllerTest {
                 0,
                 0
         );
-        when(problemService.getProblems(eq(Difficulty.HARD), isNull(), any(Pageable.class))).thenReturn(response);
+        when(problemService.getProblems(eq(1L), eq(Difficulty.HARD), isNull(), any(Pageable.class))).thenReturn(response);
 
         ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
 
-        mockMvc.perform(get("/problems?difficulty=HARD&page=0&size=2"))
+        mockMvc.perform(get("/study-blocks/{studyBlockId}/problems?difficulty=HARD&page=0&size=2", 1L))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.content", hasSize(0)))
@@ -353,7 +399,7 @@ class ProblemControllerTest {
                 .andExpect(jsonPath("$.totalElements").value(0))
                 .andExpect(jsonPath("$.totalPages").value(0));
 
-        verify(problemService).getProblems(eq(Difficulty.HARD), isNull(), pageableCaptor.capture());
+        verify(problemService).getProblems(eq(1L), eq(Difficulty.HARD), isNull(), pageableCaptor.capture());
 
         Pageable capturedPageable = pageableCaptor.getValue();
 
@@ -363,15 +409,15 @@ class ProblemControllerTest {
 
     @Test
     void getProblemsShouldReturn400WhenDifficultyIsInvalid() throws Exception {
-        mockMvc.perform(get("/problems?difficulty=IMPOSSIBLE"))
+        mockMvc.perform(get("/study-blocks/{studyBlockId}/problems?difficulty=IMPOSSIBLE", 1L))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.status").value(400))
                 .andExpect(jsonPath("$.error").value("Bad Request"))
                 .andExpect(jsonPath("$.message").value("Difficulty must be one of: EASY, MEDIUM, HARD"))
-                .andExpect(jsonPath("$.path").value("/problems"));
+                .andExpect(jsonPath("$.path").value("/study-blocks/1/problems"));
 
-        verify(problemService, never()).getProblems(any(), any(), any());
+        verify(problemService, never()).getProblems(any(), any(), any(), any());
     }
 
     @Test
@@ -414,11 +460,11 @@ class ProblemControllerTest {
                 3
         );
 
-        when(problemService.getProblems(isNull(),eq(true), any(Pageable.class))).thenReturn(response);
+        when(problemService.getProblems(eq(1L), isNull(),eq(true), any(Pageable.class))).thenReturn(response);
 
         ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
 
-        mockMvc.perform(get("/problems?solved=true&page=0&size=2"))
+        mockMvc.perform(get("/study-blocks/{studyBlockId}/problems?solved=true&page=0&size=2", 1L))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.content", hasSize(2)))
@@ -445,7 +491,7 @@ class ProblemControllerTest {
                 .andExpect(jsonPath("$.totalElements").value(5))
                 .andExpect(jsonPath("$.totalPages").value(3));
 
-        verify(problemService).getProblems(isNull(), eq(true), pageableCaptor.capture());
+        verify(problemService).getProblems(eq(1L), isNull(), eq(true), pageableCaptor.capture());
 
         Pageable capturedPageable = pageableCaptor.getValue();
 
@@ -462,11 +508,11 @@ class ProblemControllerTest {
                 0,
                 0
         );
-        when(problemService.getProblems(isNull(),eq(false), any(Pageable.class))).thenReturn(response);
+        when(problemService.getProblems(eq(1L), isNull(),eq(false), any(Pageable.class))).thenReturn(response);
 
         ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
 
-        mockMvc.perform(get("/problems?solved=false&page=0&size=2"))
+        mockMvc.perform(get("/study-blocks/{studyBlockId}/problems?solved=false&page=0&size=2", 1L))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.content", hasSize(0)))
@@ -475,7 +521,7 @@ class ProblemControllerTest {
                 .andExpect(jsonPath("$.totalElements").value(0))
                 .andExpect(jsonPath("$.totalPages").value(0));
 
-        verify(problemService).getProblems(isNull(), eq(false), pageableCaptor.capture());
+        verify(problemService).getProblems(eq(1L), isNull(), eq(false), pageableCaptor.capture());
 
         Pageable capturedPageable = pageableCaptor.getValue();
 
@@ -485,15 +531,15 @@ class ProblemControllerTest {
 
     @Test
     void getProblemsShouldReturn400WhenSolvedIsInvalid() throws Exception {
-        mockMvc.perform(get("/problems?solved=invalid"))
+        mockMvc.perform(get("/study-blocks/{studyBlockId}/problems?solved=invalid", 1L))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.status").value(400))
                 .andExpect(jsonPath("$.error").value("Bad Request"))
                 .andExpect(jsonPath("$.message").value("Solved must be true or false"))
-                .andExpect(jsonPath("$.path").value("/problems"));
+                .andExpect(jsonPath("$.path").value("/study-blocks/1/problems"));
 
-        verify(problemService, never()).getProblems(any(), any(), any(Pageable.class));
+        verify(problemService, never()).getProblems(any(), any(), any(), any(Pageable.class));
     }
 
     @Test
@@ -536,11 +582,11 @@ class ProblemControllerTest {
                 3
         );
 
-        when(problemService.getProblems(eq(Difficulty.EASY), eq(true), any(Pageable.class))).thenReturn(response);
+        when(problemService.getProblems(eq(1L), eq(Difficulty.EASY), eq(true), any(Pageable.class))).thenReturn(response);
 
         ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
 
-        mockMvc.perform(get("/problems?difficulty=EASY&solved=true&page=2&size=5"))
+        mockMvc.perform(get("/study-blocks/{studyBlockId}/problems?difficulty=EASY&solved=true&page=2&size=5", 1L))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.content", hasSize(2)))
@@ -567,7 +613,7 @@ class ProblemControllerTest {
                 .andExpect(jsonPath("$.totalElements").value(15))
                 .andExpect(jsonPath("$.totalPages").value(3));
 
-        verify(problemService).getProblems(eq(Difficulty.EASY), eq(true), pageableCaptor.capture());
+        verify(problemService).getProblems(eq(1L), eq(Difficulty.EASY), eq(true), pageableCaptor.capture());
 
         Pageable capturedPageable = pageableCaptor.getValue();
 
@@ -585,11 +631,11 @@ class ProblemControllerTest {
                 0
         );
 
-        when(problemService.getProblems(eq(Difficulty.HARD), eq(false), any(Pageable.class))).thenReturn(response);
+        when(problemService.getProblems(eq(1L), eq(Difficulty.HARD), eq(false), any(Pageable.class))).thenReturn(response);
 
         ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
 
-        mockMvc.perform(get("/problems?difficulty=HARD&solved=false&page=0&size=2"))
+        mockMvc.perform(get("/study-blocks/{studyBlockId}/problems?difficulty=HARD&solved=false&page=0&size=2", 1L))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.content", hasSize(0)))
@@ -598,7 +644,7 @@ class ProblemControllerTest {
                 .andExpect(jsonPath("$.totalElements").value(0))
                 .andExpect(jsonPath("$.totalPages").value(0));
 
-        verify(problemService).getProblems(eq(Difficulty.HARD), eq(false), pageableCaptor.capture());
+        verify(problemService).getProblems(eq(1L), eq(Difficulty.HARD), eq(false), pageableCaptor.capture());
 
         Pageable capturedPageable = pageableCaptor.getValue();
 
@@ -646,11 +692,11 @@ class ProblemControllerTest {
                 2
         );
 
-        when(problemService.getProblems(isNull(), isNull(), any(Pageable.class))).thenReturn(response);
+        when(problemService.getProblems(eq(1L), isNull(), isNull(), any(Pageable.class))).thenReturn(response);
 
         ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
 
-        mockMvc.perform(get("/problems?page=0&size=2&sort=id,desc"))
+        mockMvc.perform(get("/study-blocks/{studyBlockId}/problems?page=0&size=2&sort=id,desc", 1L))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.content", hasSize(2)))
@@ -661,7 +707,7 @@ class ProblemControllerTest {
                 .andExpect(jsonPath("$.totalElements").value(4))
                 .andExpect(jsonPath("$.totalPages").value(2));
 
-        verify(problemService).getProblems(isNull(), isNull(), pageableCaptor.capture());
+        verify(problemService).getProblems(eq(1L), isNull(), isNull(), pageableCaptor.capture());
 
         Pageable capturedPageable = pageableCaptor.getValue();
 
@@ -691,9 +737,9 @@ class ProblemControllerTest {
                 updatedAt
         );
 
-        when(problemService.getProblemById(1L)).thenReturn(problemResponse);
+        when(problemService.getProblemById(1L, 5L)).thenReturn(problemResponse);
 
-        mockMvc.perform(get("/problems/{id}", 1L))
+        mockMvc.perform(get("/study-blocks/{studyBlocksId}/problems/{problemId}", 5L, 1L))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.id").value(1L))
@@ -706,23 +752,39 @@ class ProblemControllerTest {
                 .andExpect(jsonPath("$.createdAt").value("2026-08-22T18:00:00"))
                 .andExpect(jsonPath("$.updatedAt").value("2026-08-22T18:30:00"));
 
-        verify(problemService).getProblemById(1L);
+        verify(problemService).getProblemById(1L, 5L);
     }
 
     @Test
-    void getProblemsByIdShouldReturn404WhenProblemDoesNotExist() throws Exception {
-        when(problemService.getProblemById(99L))
-                .thenThrow(new ProblemNotFoundException("Problem with id 99 was not found"));
+    void getProblemsByIdShouldReturn404WhenStudyBlockDoesNotExist() throws Exception {
+        when(problemService.getProblemById(1L, 99L))
+                .thenThrow(new StudyBlockNotFoundException("Study block with id 99 was not found"));
 
-        mockMvc.perform(get("/problems/{id}", 99L))
+        mockMvc.perform(get("/study-blocks/{studyBlocksId}/problems/{problemId}", 99L, 1L))
                 .andExpect(status().isNotFound())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.status").value(404))
                 .andExpect(jsonPath("$.error").value("Not Found"))
-                .andExpect(jsonPath("$.message").value("Problem with id 99 was not found"))
-                .andExpect(jsonPath("$.path").value("/problems/99"));
+                .andExpect(jsonPath("$.message").value("Study block with id 99 was not found"))
+                .andExpect(jsonPath("$.path").value("/study-blocks/99/problems/1"));
 
-        verify(problemService).getProblemById(99L);
+        verify(problemService).getProblemById(1L, 99L);
+    }
+
+    @Test
+    void getProblemsByIdShouldReturn404WhenProblemDoesNotExist() throws Exception {
+        when(problemService.getProblemById(99L, 1L))
+                .thenThrow(new ProblemNotFoundException("Problem with id 99 was not found in study block 1"));
+
+        mockMvc.perform(get("/study-blocks/{studyBlockId}/problems/{id}", 1L, 99L))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.error").value("Not Found"))
+                .andExpect(jsonPath("$.message").value("Problem with id 99 was not found in study block 1"))
+                .andExpect(jsonPath("$.path").value("/study-blocks/1/problems/99"));
+
+        verify(problemService).getProblemById(99L, 1L);
     }
 
     @Test
@@ -751,9 +813,9 @@ class ProblemControllerTest {
                 updatedAt
         );
 
-        when(problemService.updateProblem(eq(1L), any(UpdateProblemRequest.class))).thenReturn(problemResponse);
+        when(problemService.updateProblem(eq(1L), eq(5L), any(UpdateProblemRequest.class))).thenReturn(problemResponse);
 
-        mockMvc.perform(put("/problems/{id}", 1L)
+        mockMvc.perform(put("/study-blocks/{studyBlockId}/problems/{problemId}",5L, 1L)
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -771,7 +833,7 @@ class ProblemControllerTest {
 
         ArgumentCaptor<UpdateProblemRequest> argumentCaptor = ArgumentCaptor.forClass(UpdateProblemRequest.class);
 
-        verify(problemService).updateProblem(eq(1L), argumentCaptor.capture());
+        verify(problemService).updateProblem(eq(1L), eq(5L), argumentCaptor.capture());
 
         UpdateProblemRequest capturedRequest = argumentCaptor.getValue();
 
@@ -794,7 +856,7 @@ class ProblemControllerTest {
         request.setNotes("Updated Notes");
         request.setUrl("Updated Url");
 
-        mockMvc.perform(put("/problems/{id}", 1L)
+        mockMvc.perform(put("/study-blocks/{studyBlockId}/problems/{problemId}",5L, 1L)
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -803,9 +865,9 @@ class ProblemControllerTest {
                 .andExpect(jsonPath("$.status").value(400))
                 .andExpect(jsonPath("$.error").value("Bad Request"))
                 .andExpect(jsonPath("$.message").value("Title cannot be empty"))
-                .andExpect(jsonPath("$.path").value("/problems/1"));
+                .andExpect(jsonPath("$.path").value("/study-blocks/5/problems/1"));
 
-        verify(problemService, never()).updateProblem(eq(1L), any(UpdateProblemRequest.class));
+        verify(problemService, never()).updateProblem(anyLong(), anyLong(), any(UpdateProblemRequest.class));
     }
 
     @Test
@@ -821,7 +883,7 @@ class ProblemControllerTest {
                 }
                 """;
 
-        mockMvc.perform(put("/problems/{id}", 1L)
+        mockMvc.perform(put("/study-blocks/{studyBlockId}/problems/{problemId}", 5L,1L)
                     .contentType(MediaType.APPLICATION_JSON)
                     .accept(MediaType.APPLICATION_JSON)
                     .content(json))
@@ -829,10 +891,39 @@ class ProblemControllerTest {
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.status").value(400))
                 .andExpect(jsonPath("$.error").value("Bad Request"))
-                .andExpect(jsonPath("$.message").value("Difficulty must be one of: EASY, MEDIUM, HARD"))
-                .andExpect(jsonPath("$.path").value("/problems/1"));
+                .andExpect(jsonPath("$.message").value("Invalid request body"))
+                .andExpect(jsonPath("$.path").value("/study-blocks/5/problems/1"));
 
-        verify(problemService, never()).updateProblem(eq(1L), any());
+        verify(problemService, never()).updateProblem(anyLong(), anyLong(), any());
+    }
+
+    @Test
+    void updateProblemShouldReturn404WhenStudyBlockDoesNotExist() throws Exception {
+        UpdateProblemRequest request = new UpdateProblemRequest();
+
+        request.setTitle("Updated Title");
+        request.setDifficulty(Difficulty.EASY);
+        request.setAlgorithm("Updated Algorithm");
+        request.setSolved(false);
+        request.setNotes("Updated Notes");
+        request.setUrl("Updated Url");
+
+
+        when(problemService.updateProblem(eq(1L), eq(99L), any(UpdateProblemRequest.class)))
+                .thenThrow(new StudyBlockNotFoundException("Study block with id 99 was not found"));
+
+        mockMvc.perform(put("/study-blocks/{studyBlockId}/problems/{problemId}", 99L, 1L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.error").value("Not Found"))
+                .andExpect(jsonPath("$.message").value("Study block with id 99 was not found"))
+                .andExpect(jsonPath("$.path").value("/study-blocks/99/problems/1"));
+
+        verify(problemService).updateProblem(eq(1L), eq(99L), any(UpdateProblemRequest.class));
     }
 
     @Test
@@ -847,10 +938,10 @@ class ProblemControllerTest {
         request.setUrl("Updated Url");
 
 
-        when(problemService.updateProblem(eq(99L), any(UpdateProblemRequest.class)))
-                .thenThrow(new ProblemNotFoundException("Problem with id 99 was not found"));
+        when(problemService.updateProblem(eq(99L), eq(1L), any(UpdateProblemRequest.class)))
+                .thenThrow(new ProblemNotFoundException("Problem with id 99 was not found in study block 1"));
 
-        mockMvc.perform(put("/problems/{id}", 99L)
+        mockMvc.perform(put("/study-blocks/{studyBlockId}/problems/{problemId}", 1L, 99L)
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -858,36 +949,53 @@ class ProblemControllerTest {
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.status").value(404))
                 .andExpect(jsonPath("$.error").value("Not Found"))
-                .andExpect(jsonPath("$.message").value("Problem with id 99 was not found"))
-                .andExpect(jsonPath("$.path").value("/problems/99"));
+                .andExpect(jsonPath("$.message").value("Problem with id 99 was not found in study block 1"))
+                .andExpect(jsonPath("$.path").value("/study-blocks/1/problems/99"));
 
-        verify(problemService).updateProblem(eq(99L), any(UpdateProblemRequest.class));
+        verify(problemService).updateProblem(eq(99L), eq(1L), any(UpdateProblemRequest.class));
     }
 
     @Test
     void deleteProblemShouldReturn204WhenProblemExists() throws Exception {
 
-        mockMvc.perform(delete("/problems/{id}", 1L))
+        mockMvc.perform(delete("/study-blocks/{studyBlockId}/problems/{problemId}", 5L, 1L))
                 .andExpect(status().isNoContent())
                 .andExpect(content().string(""));
 
-        verify(problemService).deleteProblem(1L);
+        verify(problemService).deleteProblem(1L, 5L);
+    }
+
+    @Test
+    void deleteProblemShouldReturn404WhenStudyBlockDoesNotExist() throws Exception {
+
+        doThrow(new StudyBlockNotFoundException("Study block with id 99 was not found"))
+                .when(problemService).deleteProblem(1L, 99L);
+
+        mockMvc.perform(delete("/study-blocks/{studyBlockId}/problems/{problemId}", 99L, 1L))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.error").value("Not Found"))
+                .andExpect(jsonPath("$.message").value("Study block with id 99 was not found"))
+                .andExpect(jsonPath("$.path").value("/study-blocks/99/problems/1"));
+
+        verify(problemService).deleteProblem(1L, 99L);
     }
 
     @Test
     void deleteProblemShouldReturn404WhenProblemDoesNotExist() throws Exception {
 
-        doThrow(new ProblemNotFoundException("Problem with id 99 was not found"))
-                .when(problemService).deleteProblem(99L);
+        doThrow(new ProblemNotFoundException("Problem with id 99 was not found in study block 1"))
+                .when(problemService).deleteProblem(99L, 1L);
 
-        mockMvc.perform(delete("/problems/{id}", 99L))
+        mockMvc.perform(delete("/study-blocks/{studyBlockId}/problems/{problemId}", 1L, 99L))
                 .andExpect(status().isNotFound())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.status").value(404))
                 .andExpect(jsonPath("$.error").value("Not Found"))
-                .andExpect(jsonPath("$.message").value("Problem with id 99 was not found"))
-                .andExpect(jsonPath("$.path").value("/problems/99"));
+                .andExpect(jsonPath("$.message").value("Problem with id 99 was not found in study block 1"))
+                .andExpect(jsonPath("$.path").value("/study-blocks/1/problems/99"));
 
-        verify(problemService).deleteProblem(99L);
+        verify(problemService).deleteProblem(99L, 1L);
     }
 }

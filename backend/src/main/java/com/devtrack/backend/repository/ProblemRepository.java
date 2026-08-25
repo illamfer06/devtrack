@@ -6,10 +6,14 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.domain.Pageable;
 
+import java.util.Optional;
+
 
 public interface ProblemRepository extends JpaRepository<Problem, Long> {
 
-    Page<Problem> findByDifficulty(Difficulty difficulty, Pageable pageable);
-    Page<Problem> findBySolved(boolean solved, Pageable pageable);
-    Page<Problem> findByDifficultyAndSolved(Difficulty difficulty, boolean solved, Pageable pageable);
+    Optional<Problem> findByIdAndStudyBlockId(Long problemId, Long studyBlockId);
+    Page<Problem> findByStudyBlockId(Long studyBlockId, Pageable pageable);
+    Page<Problem> findByStudyBlockIdAndDifficulty(Long studyBlockId, Difficulty difficulty, Pageable pageable);
+    Page<Problem> findByStudyBlockIdAndSolved(Long studyBlockId, boolean solved, Pageable pageable);
+    Page<Problem> findByStudyBlockIdAndDifficultyAndSolved(Long studyBlockId, Difficulty difficulty, boolean solved, Pageable pageable);
 }

@@ -15,7 +15,7 @@ import org.springframework.data.domain.Pageable;
 import java.net.URI;
 
 @RestController
-@RequestMapping("/problems")
+@RequestMapping("/study-blocks/{studyBlockId}/problems")
 public class ProblemController {
 
     private final ProblemService problemService;
@@ -25,35 +25,46 @@ public class ProblemController {
     }
 
     @PostMapping
-    public ResponseEntity<ProblemResponse> createProblem(@Valid @RequestBody CreateProblemRequest request) {
-        ProblemResponse createdProblem = problemService.createProblem(request);
-        URI location = URI.create("/problems/" + createdProblem.getId());
+    public ResponseEntity<ProblemResponse> createProblem(
+            @PathVariable Long studyBlockId,
+            @Valid @RequestBody CreateProblemRequest request) {
+        ProblemResponse createdProblem = problemService.createProblem(studyBlockId, request);
+        URI location = URI.create("/study-blocks/" + studyBlockId + "/problems/" + createdProblem.getId());
 
         return ResponseEntity.created(location).body(createdProblem);
     }
 
     @GetMapping
     public PageResponse<ProblemResponse> getProblems(
+            @PathVariable Long studyBlockId,
             @RequestParam(required = false) Difficulty difficulty,
             @RequestParam(required = false) Boolean solved,
             Pageable pageable) {
 
-        return problemService.getProblems(difficulty, solved, pageable);
+        return problemService.getProblems(studyBlockId, difficulty, solved, pageable);
     }
 
-    @GetMapping("/{id}")
-    public ProblemResponse getProblemById(@PathVariable Long id) {
-        return problemService.getProblemById(id);
+    @GetMapping("/{problemId}")
+    public ProblemResponse getProblemById(
+            @PathVariable Long studyBlockId,
+            @PathVariable Long problemId) {
+
+        return problemService.getProblemById(problemId, studyBlockId);
     }
 
-    @PutMapping("/{id}")
-    public ProblemResponse updateProblem(@PathVariable Long id, @Valid @RequestBody UpdateProblemRequest request) {
-        return problemService.updateProblem(id, request);
+    @PutMapping("/{problemId}")
+    public ProblemResponse updateProblem(
+            @PathVariable Long studyBlockId,
+            @PathVariable Long problemId,
+            @Valid @RequestBody UpdateProblemRequest request) {
+        return problemService.updateProblem(problemId, studyBlockId, request);
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteProblem(@PathVariable Long id) {
-        problemService.deleteProblem(id);
+    @DeleteMapping("/{problemId}")
+    public ResponseEntity<Void> deleteProblem(
+            @PathVariable Long studyBlockId,
+            @PathVariable Long problemId) {
+        problemService.deleteProblem(problemId, studyBlockId);
 
         return ResponseEntity.noContent().build();
     }

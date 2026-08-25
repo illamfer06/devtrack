@@ -5,9 +5,12 @@ import com.devtrack.backend.dto.PageResponse;
 import com.devtrack.backend.dto.ProblemResponse;
 import com.devtrack.backend.dto.UpdateProblemRequest;
 import com.devtrack.backend.exception.ProblemNotFoundException;
+import com.devtrack.backend.exception.StudyBlockNotFoundException;
 import com.devtrack.backend.model.Difficulty;
 import com.devtrack.backend.model.Problem;
+import com.devtrack.backend.model.StudyBlock;
 import com.devtrack.backend.repository.ProblemRepository;
+import com.devtrack.backend.repository.StudyBlockRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -19,12 +22,19 @@ import java.util.List;
 public class ProblemService {
 
     private final ProblemRepository problemRepository;
+    private final StudyBlockRepository studyBlockRepository;
 
-    public ProblemService(ProblemRepository problemRepository) {
+    public ProblemService(
+            ProblemRepository problemRepository,
+            StudyBlockRepository studyBlockRepository) {
+
         this.problemRepository = problemRepository;
+        this.studyBlockRepository = studyBlockRepository;
     }
 
-    public ProblemResponse createProblem(CreateProblemRequest request) {
+    public ProblemResponse createProblem(Long studyBlockId, CreateProblemRequest request) {
+        StudyBlock studyBlock = studyBlockRepository.findById(studyBlockId)
+                .orElseThrow(() -> new StudyBlockNotFoundException("Study block with id " + studyBlockId + " was not found"));
 
         Problem problem = new Problem(
                 request.getTitle(),
@@ -34,28 +44,27 @@ public class ProblemService {
                 request.getNotes(),
                 request.getUrl());
 
+        problem.setStudyBlock(studyBlock);
+
         Problem savedProblem = problemRepository.save(problem);
 
         return toProblemResponse(savedProblem);
     }
 
-    public ProblemResponse getProblemById(Long id) {
-        Problem problem = findProblemById(id);
+    public PageResponse<ProblemResponse> getProblems(Long studyBlockId, Difficulty difficulty, Boolean solved, Pageable pageable) {
+        studyBlockRepository.findById(studyBlockId)
+                .orElseThrow(() -> new StudyBlockNotFoundException("Study block with id " + studyBlockId + " was not found"));
 
-        return toProblemResponse(problem);
-    }
-
-    public PageResponse<ProblemResponse> getProblems(Difficulty difficulty, Boolean solved, Pageable pageable) {
         Page<Problem> problems;
 
         if (difficulty == null && solved == null) {
-            problems = problemRepository.findAll(pageable);
-        } else if (difficulty == null) {
-            problems = problemRepository.findBySolved(solved, pageable);
+            problems = problemRepository.findByStudyBlockId(studyBlockId, pageable);
         } else if (solved == null) {
-            problems = problemRepository.findByDifficulty(difficulty, pageable);
+            problems = problemRepository.findByStudyBlockIdAndDifficulty(studyBlockId, difficulty, pageable);
+        } else if (difficulty == null) {
+            problems = problemRepository.findByStudyBlockIdAndSolved(studyBlockId, solved, pageable);
         } else {
-            problems = problemRepository.findByDifficultyAndSolved(difficulty, solved, pageable);
+            problems = problemRepository.findByStudyBlockIdAndDifficultyAndSolved(studyBlockId, difficulty, solved, pageable);
         }
 
         List<ProblemResponse> problemResponses = new ArrayList<>();
@@ -73,8 +82,14 @@ public class ProblemService {
         );
     }
 
-    public ProblemResponse updateProblem(Long id, UpdateProblemRequest request) {
-        Problem problem = findProblemById(id);
+    public ProblemResponse getProblemById(Long problemId, Long studyBlockId) {
+        Problem problem = findProblemByIdAndStudyBlockId(problemId, studyBlockId);
+
+        return toProblemResponse(problem);
+    }
+
+    public ProblemResponse updateProblem(Long problemId, Long studyBlockId, UpdateProblemRequest request) {
+        Problem problem = findProblemByIdAndStudyBlockId(problemId, studyBlockId);
 
         problem.setTitle(request.getTitle());
         problem.setDifficulty(request.getDifficulty());
@@ -88,14 +103,18 @@ public class ProblemService {
         return toProblemResponse(updatedProblem);
     }
 
-    public void deleteProblem(Long id) {
-        Problem problem = findProblemById(id);
+    public void deleteProblem(Long problemId, Long studyBlockId) {
+        Problem problem = findProblemByIdAndStudyBlockId(problemId, studyBlockId);
 
         problemRepository.delete(problem);
     }
 
-    private Problem findProblemById(Long id) {
-        return problemRepository.findById(id).orElseThrow(() -> new ProblemNotFoundException("Problem with id " + id + " was not found"));
+    private Problem findProblemByIdAndStudyBlockId(Long problemId, Long studyBlockId) {
+        studyBlockRepository.findById(studyBlockId)
+                .orElseThrow(() -> new StudyBlockNotFoundException("Study block with id " + studyBlockId + " was not found"));
+
+        return problemRepository.findByIdAndStudyBlockId(problemId, studyBlockId)
+                .orElseThrow(() -> new ProblemNotFoundException("Problem with id " + problemId + " was not found in study block " + studyBlockId));
     }
 
     private ProblemResponse toProblemResponse(Problem problem) {

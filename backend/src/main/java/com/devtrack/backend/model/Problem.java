@@ -25,6 +25,9 @@ public class Problem {
     private LocalDateTime createdAt;
     @UpdateTimestamp
     private LocalDateTime updatedAt;
+    @ManyToOne
+    @JoinColumn(name = "study_block_id", nullable = false)
+    private StudyBlock studyBlock;
 
     public Problem(){}
 
@@ -85,6 +88,7 @@ public class Problem {
     }
     public LocalDateTime getCreatedAt() { return this.createdAt;}
     public LocalDateTime getUpdatedAt() { return this.updatedAt;}
+    public StudyBlock getStudyBlock() { return this.studyBlock;}
 
     public void setTitle(String title) {this.title = title;}
     public void setDifficulty(Difficulty difficulty) {
@@ -102,4 +106,5 @@ public class Problem {
     public void setUrl(String url) {
         this.url = url;
     }
+    public void setStudyBlock(StudyBlock studyBlock) { this.studyBlock = studyBlock;}
 }
