@@ -2,15 +2,42 @@ package com.devtrack.backend.dto;
 
 import com.devtrack.backend.model.Difficulty;
 import jakarta.validation.constraints.NotBlank;
+import io.swagger.v3.oas.annotations.media.Schema;
 
+@Schema(description = "Request body for creating a coding problem")
 public class CreateProblemRequest {
 
+    @Schema(
+            description = "Title of the coding problem",
+            example = "Two Sum",
+            requiredMode = Schema.RequiredMode.REQUIRED
+    )
     @NotBlank(message = "Title cannot be empty")
     private String title;
+    @Schema(
+            description = "Difficulty level of the problem",
+            example = "EASY"
+    )
     private Difficulty difficulty;
+    @Schema(
+            description = "Main algorithm or technique used to solve the problem",
+            example = "Hash Map"
+    )
     private String algorithm;
+    @Schema(
+            description = "Indicates whether the problem has been solved",
+            example = "true"
+    )
     private boolean solved;
+    @Schema(
+            description = "Optional notes about the problem or solution",
+            example = "Review the O(n) solution"
+    )
     private String notes;
+    @Schema(
+            description = "Optional URL of the original problem",
+            example = "https://leetcode.com/problems/two-sum/"
+    )
     private String url;
 
     public CreateProblemRequest() {
