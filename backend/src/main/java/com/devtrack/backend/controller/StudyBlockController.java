@@ -158,7 +158,7 @@ public class StudyBlockController {
 
     @Operation(
             summary = "Delete a study block",
-            description = "Deletes a study block."
+            description = "Deletes an existing study block if it does not contain any problems."
     )
     @ApiResponses({
             @ApiResponse(
@@ -168,6 +168,14 @@ public class StudyBlockController {
             @ApiResponse(
                     responseCode = "404",
                     description = "Study block not found",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "409",
+                    description = "Study block cannot be deleted because it contains problems",
                     content = @Content(
                             mediaType = "application/json",
                             schema = @Schema(implementation = ErrorResponse.class)

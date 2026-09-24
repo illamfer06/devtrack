@@ -1,8 +1,10 @@
 package com.devtrack.backend.service;
 
 import com.devtrack.backend.dto.*;
+import com.devtrack.backend.exception.StudyBlockNotEmptyException;
 import com.devtrack.backend.exception.StudyBlockNotFoundException;
 import com.devtrack.backend.model.StudyBlock;
+import com.devtrack.backend.repository.ProblemRepository;
 import com.devtrack.backend.repository.StudyBlockRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -29,6 +31,9 @@ class StudyBlockServiceTest {
 
     @Mock
     private StudyBlockRepository studyBlockRepository;
+
+    @Mock
+    private ProblemRepository problemRepository;
 
     @InjectMocks
     private StudyBlockService studyBlockService;
@@ -270,7 +275,7 @@ class StudyBlockServiceTest {
     }
 
     @Test
-    void deleteStudyBlockShouldDeleteStudyBlockWhenStudyBlockExists() {
+    void deleteStudyBlockShouldDeleteStudyBlockWhenStudyBlockExistsAndIsEmpty() {
         StudyBlock studyBlock = new StudyBlock(
                 1L,
                 "Title",
@@ -278,12 +283,36 @@ class StudyBlockServiceTest {
         );
 
         when(studyBlockRepository.findById(1L)).thenReturn(Optional.of(studyBlock));
+        when(problemRepository.existsByStudyBlockId(1L)).thenReturn(false);
 
         studyBlockService.deleteStudyBlock(1L);
 
         verify(studyBlockRepository).findById(1L);
+        verify(problemRepository).existsByStudyBlockId(1L);
         verify(studyBlockRepository).delete(studyBlock);
     }
+
+    @Test
+    void deleteStudyBlockShouldThrowStudyBlockNotEmptyExceptionWhenStudyBlockExistsAndIsNotEmpty() {
+        StudyBlock studyBlock = new StudyBlock(
+                1L,
+                "Title",
+                true
+        );
+
+        when(studyBlockRepository.findById(99L)).thenReturn(Optional.of(studyBlock));
+        when(problemRepository.existsByStudyBlockId(99L)).thenReturn(true);
+
+        StudyBlockNotEmptyException exception = assertThrows(StudyBlockNotEmptyException.class,
+                () -> studyBlockService.deleteStudyBlock(99L));
+
+        assertEquals("Study block must be empty to delete", exception.getMessage());
+
+        verify(studyBlockRepository).findById(99L);
+        verify(problemRepository).existsByStudyBlockId(99L);
+        verify(studyBlockRepository, never()).delete(studyBlock);
+    }
+
 
     @Test
     void deleteStudyBlockShouldThrowStudyBlockNotFoundExceptionWhenStudyBlockDoesNotExist() {
@@ -295,8 +324,7 @@ class StudyBlockServiceTest {
         assertEquals("Study block with id 99 was not found", exception.getMessage());
 
         verify(studyBlockRepository).findById(99L);
+        verify(problemRepository, never()).existsByStudyBlockId(anyLong());
         verify(studyBlockRepository, never()).delete(any(StudyBlock.class));
     }
-
-
 }

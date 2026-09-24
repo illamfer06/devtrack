@@ -16,4 +16,5 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
     Page<Problem> findByStudyBlockIdAndDifficulty(Long studyBlockId, Difficulty difficulty, Pageable pageable);
     Page<Problem> findByStudyBlockIdAndSolved(Long studyBlockId, boolean solved, Pageable pageable);
     Page<Problem> findByStudyBlockIdAndDifficultyAndSolved(Long studyBlockId, Difficulty difficulty, boolean solved, Pageable pageable);
+    boolean existsByStudyBlockId(Long studyBlockId);
 }

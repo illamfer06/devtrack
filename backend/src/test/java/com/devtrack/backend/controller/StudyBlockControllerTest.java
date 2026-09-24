@@ -1,6 +1,7 @@
 package com.devtrack.backend.controller;
 
 import com.devtrack.backend.dto.*;
+import com.devtrack.backend.exception.StudyBlockNotEmptyException;
 import com.devtrack.backend.exception.StudyBlockNotFoundException;
 import com.devtrack.backend.service.StudyBlockService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -278,7 +279,7 @@ class StudyBlockControllerTest {
 
         when(studyBlockService.getStudyBlockById(1L)).thenReturn(studyBlockResponse);
 
-        mockMvc.perform(get("/study-blocks/{id}", 1L))
+        mockMvc.perform(get("/study-blocks/{studyBlockId}", 1L))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.id").value(1L))
@@ -294,7 +295,7 @@ class StudyBlockControllerTest {
     void getStudyBlockByIdShouldReturn404WhenStudyBlockDoesNotExist() throws Exception {
         when(studyBlockService.getStudyBlockById(99L)).thenThrow(new StudyBlockNotFoundException("Study block with id 99 was not found"));
 
-        mockMvc.perform(get("/study-blocks/{id}", 99L))
+        mockMvc.perform(get("/study-blocks/{studyBlockId}", 99L))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status").value(404))
                 .andExpect(jsonPath("$.error").value("Not Found"))
@@ -324,7 +325,7 @@ class StudyBlockControllerTest {
 
         when(studyBlockService.updateStudyBlock(eq(1L), any(UpdateStudyBlockRequest.class))).thenReturn(response);
 
-        mockMvc.perform(put("/study-blocks/{id}", 1L)
+        mockMvc.perform(put("/study-blocks/{studyBlockId}", 1L)
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -353,7 +354,7 @@ class StudyBlockControllerTest {
         invalidRequest.setTitle("");
         invalidRequest.setActive(true);
 
-        mockMvc.perform(put("/study-blocks/{id}", 1L)
+        mockMvc.perform(put("/study-blocks/{studyBlockId}", 1L)
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(invalidRequest)))
@@ -377,7 +378,7 @@ class StudyBlockControllerTest {
         when(studyBlockService.updateStudyBlock(eq(99L), any(UpdateStudyBlockRequest.class)))
                 .thenThrow(new StudyBlockNotFoundException("Study block with id 99 was not found"));
 
-        mockMvc.perform(put("/study-blocks/{id}", 99L)
+        mockMvc.perform(put("/study-blocks/{studyBlockId}", 99L)
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -392,9 +393,9 @@ class StudyBlockControllerTest {
     }
 
     @Test
-    void deleteStudyBlockShouldReturn204WhenStudyBlockExists() throws Exception {
+    void deleteStudyBlockShouldReturn204WhenStudyBlockExistsAndIsEmpty() throws Exception {
 
-        mockMvc.perform(delete("/study-blocks/{id}", 1L))
+        mockMvc.perform(delete("/study-blocks/{studyBlockId}", 1L))
                 .andExpect(status().isNoContent())
                 .andExpect(content().string(""));
 
@@ -407,12 +408,29 @@ class StudyBlockControllerTest {
         doThrow(new StudyBlockNotFoundException("Study block with id 99 was not found"))
                 .when(studyBlockService).deleteStudyBlock(99L);
 
-        mockMvc.perform(delete("/study-blocks/{id}", 99L))
+        mockMvc.perform(delete("/study-blocks/{studyBlockId}", 99L))
                 .andExpect(status().isNotFound())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.status").value(404))
                 .andExpect(jsonPath("$.error").value("Not Found"))
                 .andExpect(jsonPath("$.message").value("Study block with id 99 was not found"))
+                .andExpect(jsonPath("$.path").value("/study-blocks/99"));
+
+        verify(studyBlockService).deleteStudyBlock(99L);
+    }
+
+    @Test
+    void deleteStudyBlockShouldReturn409WhenStudyBlockIsNotEmpty() throws Exception {
+
+        doThrow(new StudyBlockNotEmptyException("Study block must be empty to delete"))
+                .when(studyBlockService).deleteStudyBlock(99L);
+
+        mockMvc.perform(delete("/study-blocks/{studyBlockId}", 99L))
+                .andExpect(status().isConflict())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.error").value("Conflict"))
+                .andExpect(jsonPath("$.message").value("Study block must be empty to delete"))
                 .andExpect(jsonPath("$.path").value("/study-blocks/99"));
 
         verify(studyBlockService).deleteStudyBlock(99L);

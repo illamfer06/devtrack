@@ -1,6 +1,7 @@
 package com.devtrack.backend.exception;
 
 import com.devtrack.backend.dto.ErrorResponse;
+import com.devtrack.backend.model.StudyBlock;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -54,6 +55,14 @@ public class GlobalExceptionHandler {
             HttpServletRequest request) {
 
         return createErrorResponse(HttpStatus.NOT_FOUND, exception.getMessage(), request);
+    }
+
+    @ExceptionHandler(StudyBlockNotEmptyException.class)
+    public ResponseEntity<ErrorResponse> handleStudyBlockNotEmptyException(
+            StudyBlockNotEmptyException exception,
+            HttpServletRequest request) {
+
+        return createErrorResponse(HttpStatus.CONFLICT, exception.getMessage(), request);
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)

@@ -81,7 +81,7 @@ Accept: application/json
 }
 
 ### Delete existing study block
-DELETE http://localhost:8080/study-blocks/4
+DELETE http://localhost:8080/study-blocks/2
 
 ### Delete non-existing study block
 DELETE http://localhost:8080/study-blocks/99999
@@ -156,7 +156,7 @@ Accept: application/json
 }
 
 ### Get Problems
-GET http://localhost:8080/study-blocks/2/problems
+GET http://localhost:8080/study-blocks/3/problems
 
 ### Get Problems by Difficulty
 GET http://localhost:8080/study-blocks/2/problems?difficulty=EASY

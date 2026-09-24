@@ -4,8 +4,10 @@ import com.devtrack.backend.dto.CreateStudyBlockRequest;
 import com.devtrack.backend.dto.PageResponse;
 import com.devtrack.backend.dto.StudyBlockResponse;
 import com.devtrack.backend.dto.UpdateStudyBlockRequest;
+import com.devtrack.backend.exception.StudyBlockNotEmptyException;
 import com.devtrack.backend.exception.StudyBlockNotFoundException;
 import com.devtrack.backend.model.StudyBlock;
+import com.devtrack.backend.repository.ProblemRepository;
 import com.devtrack.backend.repository.StudyBlockRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -18,8 +20,14 @@ import java.util.List;
 public class StudyBlockService {
 
     private final StudyBlockRepository studyBlockRepository;
+    private final ProblemRepository problemRepository;
 
-    public StudyBlockService(StudyBlockRepository studyBlockRepository) { this.studyBlockRepository = studyBlockRepository;}
+    public StudyBlockService(
+            StudyBlockRepository studyBlockRepository,
+            ProblemRepository problemRepository) {
+        this.studyBlockRepository = studyBlockRepository;
+        this.problemRepository = problemRepository;
+    }
 
     public StudyBlockResponse createStudyBlock(CreateStudyBlockRequest request) {
         StudyBlock studyBlock = new StudyBlock(
@@ -76,6 +84,9 @@ public class StudyBlockService {
     public void deleteStudyBlock(Long id) {
         StudyBlock studyBlock = findStudyBlockById(id);
 
+        if (problemRepository.existsByStudyBlockId(id)) {
+            throw new StudyBlockNotEmptyException("Study block must be empty to delete");
+        }
         studyBlockRepository.delete(studyBlock);
     }
 
