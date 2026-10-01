@@ -1,9 +1,6 @@
 package com.devtrack.backend.service;
 
-import com.devtrack.backend.dto.CreateProblemRequest;
-import com.devtrack.backend.dto.PageResponse;
-import com.devtrack.backend.dto.ProblemResponse;
-import com.devtrack.backend.dto.UpdateProblemRequest;
+import com.devtrack.backend.dto.*;
 import com.devtrack.backend.exception.ProblemNotFoundException;
 import com.devtrack.backend.exception.StudyBlockNotFoundException;
 import com.devtrack.backend.model.Difficulty;
@@ -14,9 +11,11 @@ import com.devtrack.backend.repository.StudyBlockRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class ProblemService {
@@ -109,9 +108,32 @@ public class ProblemService {
         problemRepository.delete(problem);
     }
 
-    private Problem findProblemByIdAndStudyBlockId(Long problemId, Long studyBlockId) {
-        studyBlockRepository.findById(studyBlockId)
+    @Transactional
+    public void bulkDeleteProblems(
+            Long studyBlockId,
+            BulkDeleteProblemsRequest request) {
+
+        findStudyBlockById(studyBlockId);
+
+        Set<Long> problemIds = request.getProblemIds();
+
+        List<Problem> problems = problemRepository.findByIdInAndStudyBlockId(problemIds, studyBlockId);
+
+        if (problems.size() != problemIds.size()) {
+            throw new ProblemNotFoundException(
+                    "One or more selected problems were not found in study block " + studyBlockId
+            );
+        }
+        problemRepository.deleteAllInBatch(problems);
+    }
+
+    private StudyBlock findStudyBlockById(Long studyBlockId) {
+        return studyBlockRepository.findById(studyBlockId)
                 .orElseThrow(() -> new StudyBlockNotFoundException("Study block with id " + studyBlockId + " was not found"));
+    }
+
+    private Problem findProblemByIdAndStudyBlockId(Long problemId, Long studyBlockId) {
+       findStudyBlockById(studyBlockId);
 
         return problemRepository.findByIdAndStudyBlockId(problemId, studyBlockId)
                 .orElseThrow(() -> new ProblemNotFoundException("Problem with id " + problemId + " was not found in study block " + studyBlockId));

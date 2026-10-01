@@ -16,10 +16,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.*;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -653,6 +650,12 @@ class ProblemServiceTest {
 
     @Test
     void deleteProblemShouldDeleteProblemWhenProblemExists() {
+        StudyBlock studyBlock = new StudyBlock(
+                5L,
+                "Title",
+                false
+        );
+
         Problem problem = new Problem(
                 1L,
                 "Title",
@@ -661,12 +664,6 @@ class ProblemServiceTest {
                 true,
                 "Notes",
                 "Url"
-        );
-
-        StudyBlock studyBlock = new StudyBlock(
-                5L,
-                "Title",
-                false
         );
 
         when(studyBlockRepository.findById(5L)).thenReturn(Optional.of(studyBlock));
@@ -713,5 +710,109 @@ class ProblemServiceTest {
         verify(studyBlockRepository).findById(1L);
         verify(problemRepository).findByIdAndStudyBlockId(99L, 1L);
         verify(problemRepository, never()).delete(any(Problem.class));
+    }
+
+    @Test
+    void bulkDeleteProblemsShouldDeleteAllSelectedProblems() {
+        StudyBlock studyBlock = new StudyBlock(
+                1L,
+                "Title",
+                false
+        );
+
+        Problem problem1 = new Problem(
+                1L,
+                "Title",
+                Difficulty.EASY,
+                "Algorithm",
+                true,
+                "Notes",
+                "Url"
+        );
+
+        Problem problem2 = new Problem(
+                2L,
+                "Title",
+                Difficulty.EASY,
+                "Algorithm",
+                true,
+                "Notes",
+                "Url"
+        );
+
+        List<Problem> problems = List.of(problem1, problem2);
+
+        BulkDeleteProblemsRequest request = new BulkDeleteProblemsRequest();
+
+        Set<Long> problemIds = Set.of(1L,2L);
+
+        request.setProblemIds(problemIds);
+
+        when(studyBlockRepository.findById(1L)).thenReturn(Optional.of(studyBlock));
+        when(problemRepository.findByIdInAndStudyBlockId(problemIds,1L)).thenReturn(problems);
+
+        problemService.bulkDeleteProblems(1L, request);
+
+        verify(studyBlockRepository).findById(1L);
+        verify(problemRepository).findByIdInAndStudyBlockId(problemIds, 1L);
+        verify(problemRepository).deleteAllInBatch(problems);
+    }
+
+    @Test
+    void bulkDeleteProblemsShouldThrowStudyBlockNotFoundExceptionWhenStudyBlockIdDoesNotExist() {
+
+        BulkDeleteProblemsRequest request = new BulkDeleteProblemsRequest();
+
+        Set<Long> problemIds = Set.of(1L,2L);
+
+        request.setProblemIds(problemIds);
+
+        when(studyBlockRepository.findById(99L)).thenReturn(Optional.empty());
+
+        StudyBlockNotFoundException exception = assertThrows(StudyBlockNotFoundException.class,
+                () -> problemService.bulkDeleteProblems(99L, request));
+
+        assertEquals("Study block with id 99 was not found", exception.getMessage());
+
+        verify(studyBlockRepository).findById(99L);
+        verify(problemRepository, never()).findByIdInAndStudyBlockId(anySet(), eq(99L));
+        verify(problemRepository, never()).deleteAllInBatch(anyList());
+    }
+
+    @Test
+    void bulkDeleteProblemsShouldThrowProblemNotFoundExceptionWhenAProblemIsNotInStudyBlock() {
+        StudyBlock studyBlock = new StudyBlock(
+                1L,
+                "Title",
+                false
+        );
+
+        Problem problem2 = new Problem(
+                2L,
+                "Title",
+                Difficulty.EASY,
+                "Algorithm",
+                true,
+                "Notes",
+                "Url"
+        );
+
+        BulkDeleteProblemsRequest request = new BulkDeleteProblemsRequest();
+
+        Set<Long> problemIds = Set.of(99L,2L);
+
+        request.setProblemIds(problemIds);
+
+        when(studyBlockRepository.findById(1L)).thenReturn(Optional.of(studyBlock));
+        when(problemRepository.findByIdInAndStudyBlockId(problemIds, 1L)).thenReturn(List.of(problem2));
+
+        ProblemNotFoundException exception = assertThrows(ProblemNotFoundException.class,
+                () -> problemService.bulkDeleteProblems(1L, request));
+
+        assertEquals("One or more selected problems were not found in study block 1", exception.getMessage());
+
+        verify(studyBlockRepository).findById(1L);
+        verify(problemRepository).findByIdInAndStudyBlockId(problemIds, 1L);
+        verify(problemRepository, never()).deleteAllInBatch(anyList());
     }
 }

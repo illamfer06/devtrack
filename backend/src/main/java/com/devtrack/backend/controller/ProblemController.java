@@ -239,4 +239,44 @@ public class ProblemController {
 
         return ResponseEntity.noContent().build();
     }
+
+    @Operation(
+            summary = "Delete multiple problems",
+            description = "Deletes multiple problems from a study block. All selected problems must belong to the specified study block."
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "204",
+                    description = "Problems deleted successfully"
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Study block not found or one or more selected problems do not belong to it",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid problem selection",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class)
+                    )
+            )
+    })
+    @PostMapping("/bulk-delete")
+    public ResponseEntity<Void> bulkDeleteProblems(
+            @Parameter(
+                    description = "ID of the study block",
+                    example = "1"
+            )
+            @PathVariable Long studyBlockId,
+            @Valid @RequestBody BulkDeleteProblemsRequest request) {
+
+        problemService.bulkDeleteProblems(studyBlockId, request);
+
+        return ResponseEntity.noContent().build();
+    }
 }

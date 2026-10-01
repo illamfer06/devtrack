@@ -13,7 +13,8 @@ The project is focused on learning and applying backend development concepts usi
 - Create study blocks
 - Get a study block by ID
 - Update existing study blocks
-- Delete study blocks
+- Delete empty study blocks
+- Prevent deletion of study blocks containing problems
 - Filter study blocks by active status
 - Paginated study block retrieval
 - Sorting by study block fields
@@ -25,6 +26,7 @@ The project is focused on learning and applying backend development concepts usi
 - Get a specific problem by ID within its study block
 - Update existing problems
 - Delete problems
+- Delete multiple problems in a single operation
 - Filter problems by difficulty
 - Filter problems by solved status
 - Combine multiple filters
@@ -66,7 +68,7 @@ The project is focused on learning and applying backend development concepts usi
 | GET | `/study-blocks/{studyBlockId}` | Get a study block by ID |
 | POST | `/study-blocks` | Create a new study block |
 | PUT | `/study-blocks/{studyBlockId}` | Update an existing study block |
-| DELETE | `/study-blocks/{studyBlockId}` | Delete a study block |
+| DELETE | `/study-blocks/{studyBlockId}` | Delete an empty study block |
 
 ### Problems
 
@@ -79,6 +81,7 @@ Problems are accessed through the study block they belong to.
 | POST | `/study-blocks/{studyBlockId}/problems` | Create a problem inside a study block |
 | PUT | `/study-blocks/{studyBlockId}/problems/{problemId}` | Update a problem |
 | DELETE | `/study-blocks/{studyBlockId}/problems/{problemId}` | Delete a problem |
+| POST | `/study-blocks/{studyBlockId}/problems/bulk-delete` | Delete multiple problems from a study block |
 
 ### Health
 
@@ -152,7 +155,17 @@ Content-Type: application/json
 ```http
 GET /study-blocks/1/problems?difficulty=EASY&solved=false&page=0&size=10&sort=id,desc
 ```
-sponse
+
+### Delete multiple problems
+
+```http
+POST /study-blocks/1/problems/bulk-delete
+Content-Type: application/json
+
+{
+    "problemIds": [1, 2, 3]
+}
+```
 
 ### Example Problem Response
 
@@ -168,7 +181,8 @@ sponse
   "createdAt": "2026-08-22T18:00:00",
   "updatedAt": "2026-08-22T18:00:00"
 }
-````
+```
+
 ## API Documentation
 
 The API is documented using OpenAPI and Swagger UI.
@@ -197,6 +211,7 @@ The project includes:
 - Tests for filtering, pagination and sorting
 - Tests for Study Block and Problem CRUD operations
 - Tests verifying that problems are accessed through their corresponding study blocks
+- Tests for bulk problem deletion and atomic validation
 
 ## Continuous Integration
 
@@ -214,6 +229,8 @@ Current functionality includes:
 - Problem CRUD operations scoped to Study Blocks
 - Validation and global exception handling
 - Filtering, pagination and sorting
+- Bulk deletion of problems within Study Blocks
+- Safe deletion of empty Study Blocks
 - Automatic timestamps
 - PostgreSQL persistence
 - Automated service and controller tests

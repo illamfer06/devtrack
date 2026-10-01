@@ -1,9 +1,6 @@
 package com.devtrack.backend.controller;
 
-import com.devtrack.backend.dto.CreateProblemRequest;
-import com.devtrack.backend.dto.PageResponse;
-import com.devtrack.backend.dto.ProblemResponse;
-import com.devtrack.backend.dto.UpdateProblemRequest;
+import com.devtrack.backend.dto.*;
 import com.devtrack.backend.exception.ProblemNotFoundException;
 import com.devtrack.backend.exception.StudyBlockNotFoundException;
 import com.devtrack.backend.model.Difficulty;
@@ -22,6 +19,7 @@ import org.springframework.http.MediaType;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -998,4 +996,145 @@ class ProblemControllerTest {
 
         verify(problemService).deleteProblem(99L, 1L);
     }
+
+    @Test
+    void bulkDeleteProblemsShouldReturn204WhenAllProblemsExists() throws Exception {
+        BulkDeleteProblemsRequest request = new BulkDeleteProblemsRequest();
+
+        Set<Long> problemIds = Set.of(1L, 2L);
+
+        request.setProblemIds(problemIds);
+
+        mockMvc.perform(post("/study-blocks/{studyBlockId}/problems/bulk-delete", 1L)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isNoContent())
+                .andExpect(content().string(""));
+
+
+        ArgumentCaptor<BulkDeleteProblemsRequest> requestCaptor = ArgumentCaptor.forClass(BulkDeleteProblemsRequest.class);
+
+        verify(problemService).bulkDeleteProblems(eq(1L), requestCaptor.capture());
+
+        assertEquals(problemIds, requestCaptor.getValue().getProblemIds());
+    }
+
+    @Test
+    void bulkDeleteProblemsShouldReturn404WhenStudyBlockDoesNotExist() throws Exception {
+        BulkDeleteProblemsRequest request = new BulkDeleteProblemsRequest();
+
+        Set<Long> problemIds = Set.of(1L, 2L);
+
+        request.setProblemIds(problemIds);
+
+        doThrow(new StudyBlockNotFoundException("Study block with id 99 was not found"))
+                .when(problemService).bulkDeleteProblems(eq(99L), any(BulkDeleteProblemsRequest.class));
+
+        mockMvc.perform(post("/study-blocks/{studyBlockId}/problems/bulk-delete", 99L)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.error").value("Not Found"))
+                .andExpect(jsonPath("$.message").value("Study block with id 99 was not found"))
+                .andExpect(jsonPath("$.path").value("/study-blocks/99/problems/bulk-delete"));
+
+        ArgumentCaptor<BulkDeleteProblemsRequest> requestCaptor = ArgumentCaptor.forClass(BulkDeleteProblemsRequest.class);
+
+        verify(problemService).bulkDeleteProblems(eq(99L), requestCaptor.capture());
+
+        assertEquals(problemIds, requestCaptor.getValue().getProblemIds());
+    }
+
+    @Test
+    void bulkDeleteProblemsShouldReturn404WhenProblemIsNotInStudyBlock() throws Exception {
+        BulkDeleteProblemsRequest request = new BulkDeleteProblemsRequest();
+
+        Set<Long> problemIds = Set.of(99L, 2L);
+
+        request.setProblemIds(problemIds);
+
+        doThrow(new ProblemNotFoundException("One or more selected problems were not found in study block 1"))
+                .when(problemService).bulkDeleteProblems(eq(1L), any(BulkDeleteProblemsRequest.class));
+
+        mockMvc.perform(post("/study-blocks/{studyBlockId}/problems/bulk-delete", 1L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.error").value("Not Found"))
+                .andExpect(jsonPath("$.message").value("One or more selected problems were not found in study block 1"))
+                .andExpect(jsonPath("$.path").value("/study-blocks/1/problems/bulk-delete"));
+
+        ArgumentCaptor<BulkDeleteProblemsRequest> requestCaptor = ArgumentCaptor.forClass(BulkDeleteProblemsRequest.class);
+
+        verify(problemService).bulkDeleteProblems(eq(1L), requestCaptor.capture());
+
+        assertEquals(problemIds, requestCaptor.getValue().getProblemIds());
+    }
+
+    @Test
+    void bulkDeleteProblemsShouldReturn400WhenProblemIdsIsEmpty() throws Exception {
+
+        BulkDeleteProblemsRequest request = new BulkDeleteProblemsRequest();
+        request.setProblemIds(Set.of());
+
+        mockMvc.perform(post("/study-blocks/{studyBlockId}/problems/bulk-delete", 1L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad Request"))
+                .andExpect(jsonPath("$.message").value("At least one problem must be selected"))
+                .andExpect(jsonPath("$.path").value("/study-blocks/1/problems/bulk-delete"));
+
+        verify(problemService, never()).bulkDeleteProblems(eq(1L), any(BulkDeleteProblemsRequest.class));
+    }
+
+    @Test
+    void bulkDeleteProblemsShouldReturn400WhenProblemIdsIsNull() throws Exception {
+
+        BulkDeleteProblemsRequest request = new BulkDeleteProblemsRequest();
+        request.setProblemIds(null);
+
+        mockMvc.perform(post("/study-blocks/{studyBlockId}/problems/bulk-delete", 1L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad Request"))
+                .andExpect(jsonPath("$.message").value("At least one problem must be selected"))
+                .andExpect(jsonPath("$.path").value("/study-blocks/1/problems/bulk-delete"));
+
+        verify(problemService, never())
+                .bulkDeleteProblems(eq(1L), any(BulkDeleteProblemsRequest.class));
+    }
+
+    @Test
+    void bulkDeleteProblemsShouldReturn400WhenProblemIdIsNull() throws Exception {
+
+        String requestBody = """
+            {
+                "problemIds": [1, null, 3]
+            }
+            """;
+
+        mockMvc.perform(post("/study-blocks/{studyBlockId}/problems/bulk-delete", 1L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad Request"))
+                .andExpect(jsonPath("$.message").value("Problem id cannot be null"))
+                .andExpect(jsonPath("$.path").value("/study-blocks/1/problems/bulk-delete"));
+
+        verify(problemService, never())
+                .bulkDeleteProblems(eq(1L), any(BulkDeleteProblemsRequest.class));
+    }
+
 }

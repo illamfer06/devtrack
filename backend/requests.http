@@ -156,7 +156,7 @@ Accept: application/json
 }
 
 ### Get Problems
-GET http://localhost:8080/study-blocks/3/problems
+GET http://localhost:8080/study-blocks/2/problems
 
 ### Get Problems by Difficulty
 GET http://localhost:8080/study-blocks/2/problems?difficulty=EASY
@@ -241,6 +241,86 @@ DELETE http://localhost:8080/study-blocks/99999/problems/19
 
 ### Delete non-existing problem
 DELETE http://localhost:8080/study-blocks/2/problems/99999
+
+### Bulk delete - Success
+POST http://localhost:8080/study-blocks/2/problems/bulk-delete
+Content-Type: application/json
+
+{
+  "problemIds": [21, 22]
+}
+
+
+### Bulk delete - Study block does not exist
+POST http://localhost:8080/study-blocks/99999/problems/bulk-delete
+Content-Type: application/json
+
+{
+  "problemIds": [21, 22]
+}
+
+
+### Bulk delete - Problem does not exist
+POST http://localhost:8080/study-blocks/2/problems/bulk-delete
+Content-Type: application/json
+
+{
+  "problemIds": [1, 99999]
+}
+
+
+### Bulk delete - Problem belongs to another study block
+POST http://localhost:8080/study-blocks/1/problems/bulk-delete
+Content-Type: application/json
+
+{
+  "problemIds": [1, 5]
+}
+
+
+### Bulk delete - Empty problem IDs
+POST http://localhost:8080/study-blocks/2/problems/bulk-delete
+Content-Type: application/json
+
+{
+  "problemIds": []
+}
+
+
+### Bulk delete - Problem IDs is null
+POST http://localhost:8080/study-blocks/2/problems/bulk-delete
+Content-Type: application/json
+
+{
+  "problemIds": null
+}
+
+
+### Bulk delete - Problem ID is null
+POST http://localhost:8080/study-blocks/2/problems/bulk-delete
+Content-Type: application/json
+
+{
+  "problemIds": [1, null, 2]
+}
+
+
+### Bulk delete - Single problem
+POST http://localhost:8080/study-blocks/2/problems/bulk-delete
+Content-Type: application/json
+
+{
+  "problemIds": [18]
+}
+
+
+### Bulk delete - Duplicate problem IDs
+POST http://localhost:8080/study-blocks/2/problems/bulk-delete
+Content-Type: application/json
+
+{
+  "problemIds": [20, 20]
+}
 
 
 
