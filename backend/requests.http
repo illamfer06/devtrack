@@ -91,7 +91,7 @@ DELETE http://localhost:8080/study-blocks/99999
 ### ============================
 
 ### Create Problem
-POST http://localhost:8080/study-blocks/2/problems
+POST http://localhost:8080/study-blocks/5/problems
 Content-Type: application/json
 Accept: application/json
 
@@ -156,7 +156,7 @@ Accept: application/json
 }
 
 ### Get Problems
-GET http://localhost:8080/study-blocks/2/problems
+GET http://localhost:8080/study-blocks/5/problems
 
 ### Get Problems by Difficulty
 GET http://localhost:8080/study-blocks/2/problems?difficulty=EASY
@@ -321,6 +321,12 @@ Content-Type: application/json
 {
   "problemIds": [20, 20]
 }
+
+### Clear problems - Success
+DELETE http://localhost:8080/study-blocks/5/problems/clear
+
+### Clear problems - Suty block does not exist
+DELETE http://localhost:8080/study-blocks/99999/problems/clear
 
 
 

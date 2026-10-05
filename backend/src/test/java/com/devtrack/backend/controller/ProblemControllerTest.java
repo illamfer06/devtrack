@@ -1137,4 +1137,30 @@ class ProblemControllerTest {
                 .bulkDeleteProblems(eq(1L), any(BulkDeleteProblemsRequest.class));
     }
 
+    @Test
+    void clearProblemsShouldReturn204WhenStudyBlockExists() throws Exception {
+        mockMvc.perform(delete("/study-blocks/{studyBlockId}/problems/clear", 1L))
+                .andExpect(status().isNoContent())
+                .andExpect(content().string(""));
+
+        verify(problemService).clearProblems(1L);
+    }
+
+    @Test
+    void clearProblemsShouldReturn404WhenStudyBlockDoesNotExist() throws Exception {
+        doThrow(new StudyBlockNotFoundException("Study block with id 99 was not found"))
+                .when(problemService).clearProblems(99L);
+
+        mockMvc.perform(delete("/study-blocks/{studyBlockId}/problems/clear", 99L))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.error").value("Not Found"))
+                .andExpect(jsonPath("$.message")
+                        .value("Study block with id 99 was not found"))
+                .andExpect(jsonPath("$.path")
+                        .value("/study-blocks/99/problems/clear"));
+
+        verify(problemService).clearProblems(99L);
+    }
 }

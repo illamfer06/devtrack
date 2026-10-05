@@ -27,6 +27,7 @@ The project is focused on learning and applying backend development concepts usi
 - Update existing problems
 - Delete problems
 - Delete multiple problems in a single operation
+- Clear all problems from a study block
 - Filter problems by difficulty
 - Filter problems by solved status
 - Combine multiple filters
@@ -82,6 +83,7 @@ Problems are accessed through the study block they belong to.
 | PUT | `/study-blocks/{studyBlockId}/problems/{problemId}` | Update a problem |
 | DELETE | `/study-blocks/{studyBlockId}/problems/{problemId}` | Delete a problem |
 | POST | `/study-blocks/{studyBlockId}/problems/bulk-delete` | Delete multiple problems from a study block |
+| DELETE | `/study-blocks/{studyBlockId}/problems/clear` | Delete all problems from a study block |
 
 ### Health
 
@@ -166,6 +168,11 @@ Content-Type: application/json
     "problemIds": [1, 2, 3]
 }
 ```
+### Clear all problems from a study block
+
+```http
+DELETE /study-blocks/1/problems/clear
+```
 
 ### Example Problem Response
 
@@ -212,6 +219,7 @@ The project includes:
 - Tests for Study Block and Problem CRUD operations
 - Tests verifying that problems are accessed through their corresponding study blocks
 - Tests for bulk problem deletion and atomic validation
+- Tests for clearing all problems from a study block
 
 ## Continuous Integration
 
@@ -230,6 +238,7 @@ Current functionality includes:
 - Validation and global exception handling
 - Filtering, pagination and sorting
 - Bulk deletion of problems within Study Blocks
+- Clearing all problems from a Study Block
 - Safe deletion of empty Study Blocks
 - Automatic timestamps
 - PostgreSQL persistence

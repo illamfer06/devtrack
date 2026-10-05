@@ -5,6 +5,9 @@ import com.devtrack.backend.model.Problem;
 import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -20,4 +23,7 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
     Page<Problem> findByStudyBlockIdAndDifficultyAndSolved(Long studyBlockId, Difficulty difficulty, boolean solved, Pageable pageable);
     boolean existsByStudyBlockId(Long studyBlockId);
     List<Problem> findByIdInAndStudyBlockId(Set<Long> problemIds, Long studyBlockId);
+    @Modifying
+    @Query("DELETE FROM  Problem p WHERE p.studyBlock.id = :studyBlockId")
+    void deleteAllByStudyBlockId(@Param("studyBlockId") Long studyBlockId);
 }

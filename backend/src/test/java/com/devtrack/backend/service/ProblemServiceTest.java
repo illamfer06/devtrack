@@ -815,4 +815,30 @@ class ProblemServiceTest {
         verify(problemRepository).findByIdInAndStudyBlockId(problemIds, 1L);
         verify(problemRepository, never()).deleteAllInBatch(anyList());
     }
+
+    @Test
+    void clearProblemsShouldDeleteAllProblemsWhenStudyBlockExists() {
+        StudyBlock studyBlock = new StudyBlock(1L, "Java", true);
+
+        when(studyBlockRepository.findById(1L)).thenReturn(Optional.of(studyBlock));
+
+        problemService.clearProblems(1L);
+
+        verify(studyBlockRepository).findById(1L);
+        verify(problemRepository).deleteAllByStudyBlockId(1L);
+    }
+
+    @Test
+    void clearProblemsShouldThrowStudyBlockNotFoundExceptionWhenStudyBlockDoesNotExist() {
+        when(studyBlockRepository.findById(99L)).thenReturn(Optional.empty());
+
+        StudyBlockNotFoundException exception = assertThrows(
+                StudyBlockNotFoundException.class,
+                () -> problemService.clearProblems(99L));
+
+        assertEquals("Study block with id 99 was not found", exception.getMessage());
+
+        verify(studyBlockRepository).findById(99L);
+        verify(problemRepository, never()).deleteAllByStudyBlockId(anyLong());
+    }
 }

@@ -279,4 +279,35 @@ public class ProblemController {
 
         return ResponseEntity.noContent().build();
     }
+
+    @Operation(
+            summary = "Clear all problems",
+            description = "Deletes all problems from a study block without deleting the study block itself."
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "204",
+                    description = "All problems deleted successfully"
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Study block not found",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class)
+                    )
+            )
+    })
+    @DeleteMapping("/clear")
+    public ResponseEntity<Void> clearProblems(
+            @Parameter(
+                    description = "ID of the study block",
+                    example = "1"
+            )
+            @PathVariable Long studyBlockId) {
+
+        problemService.clearProblems(studyBlockId);
+
+        return ResponseEntity.noContent().build();
+    }
 }

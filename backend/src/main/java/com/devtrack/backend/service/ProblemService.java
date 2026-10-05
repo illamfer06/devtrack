@@ -127,6 +127,13 @@ public class ProblemService {
         problemRepository.deleteAllInBatch(problems);
     }
 
+    @Transactional
+    public void clearProblems(Long studyBlockId) {
+        findStudyBlockById(studyBlockId);
+
+        problemRepository.deleteAllByStudyBlockId(studyBlockId);
+    }
+
     private StudyBlock findStudyBlockById(Long studyBlockId) {
         return studyBlockRepository.findById(studyBlockId)
                 .orElseThrow(() -> new StudyBlockNotFoundException("Study block with id " + studyBlockId + " was not found"));
