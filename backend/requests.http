@@ -1,16 +1,402 @@
-### ============================
-### HEALTH
-### ============================
+# DevTrack — IntelliJ HTTP Client
+# Ejecutar SECUENCIALMENTE la preparación de Ana, después la de Bob.# Requiere backend ejecutándose en localhost:8080.
+# IntelliJ guarda variables con client.global.set durante esta sesión del HTTP Client.
+# CUIDADO: pruebas PUT/DELETE/BULK/CLEAR modifican o borran datos de verdad.
+# AVISO: DELETE /auth/me elimina la cuenta de Ana y sus StudyBlocks/Problems de verdad.
+# Si Ana ya existe: el registro dará 409. Usa otro email de prueba o una cuenta temporal.
+# No uses datos reales ni contraseñas de producción en este archivo.
+# No copies cookies ni tokens CSRF a otros lugares: se guardan como variables del HTTP Client.
+# `@no-cookie-jar` y la cabecera Cookie explícita buscan impedir mezclar sesiones.
+@baseUrl = http://localhost:8080
 
-### Health
-GET http://localhost:8080/health
+### 0. Health sin sesión: 401 (si /health sigue protegido)
+// @no-cookie-jar
+GET {{baseUrl}}/health
+Cookie: JSESSIONID=invalid-health-session
+Accept: application/json
+
+
+### 1. ANA — Sesión 1: obtener una sesión anónima y CSRF
+// @no-cookie-jar
+GET {{baseUrl}}/auth/csrf
+Cookie: JSESSIONID=invalid-ana-session-1
+Accept: application/json
+
+> {%
+    const cookie = response.headers.valueOf("Set-Cookie");
+    const match = cookie ? cookie.match(/JSESSIONID=([^;]+)/) : null;
+    if (response.status === 200 && match && response.body.token) {
+        client.global.set("anaSessionId", match[1]);
+        client.global.set("anaCsrf", response.body.token);
+    } else {
+        client.log("ERROR: no se pudo guardar sesión 1 y su CSRF; revisa Set-Cookie y respuesta.");
+    }
+    client.log("Sesión 1 guardada: " + Boolean(client.global.get("anaSessionId")));
+    client.log("CSRF 1 guardado: " + Boolean(client.global.get("anaCsrf")));
+%}
+
+
+### 2. ANA — Registrar cuenta (201); si ya existe: 409
+// @no-cookie-jar
+POST {{baseUrl}}/auth/register
+Cookie: JSESSIONID={{anaSessionId}}
+X-CSRF-TOKEN: {{anaCsrf}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "ana.devtrack.test@example.com",
+  "password": "AnaPass123!"
+}
+
+
+### 3. ANA — Registro duplicado con mayúsculas y espacios (409)
+// @no-cookie-jar
+POST {{baseUrl}}/auth/register
+Cookie: JSESSIONID={{anaSessionId}}
+X-CSRF-TOKEN: {{anaCsrf}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "  ANA.DEVTRACK.TEST@EXAMPLE.COM  ",
+  "password": "AnaPass123!"
+}
+
+
+### 4. ANA — Login con contraseña incorrecta (401 Invalid email or password)
+// @no-cookie-jar
+POST {{baseUrl}}/auth/login
+Cookie: JSESSIONID={{anaSessionId}}
+X-CSRF-TOKEN: {{anaCsrf}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "ana.devtrack.test@example.com",
+  "password": "WrongPassword123"
+}
+
+
+### 5. ANA — Login correcto SESIÓN 1 (200); guardar JSESSIONID renovado
+// @no-cookie-jar
+POST {{baseUrl}}/auth/login
+Cookie: JSESSIONID={{anaSessionId}}
+X-CSRF-TOKEN: {{anaCsrf}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "  ANA.DEVTRACK.TEST@EXAMPLE.COM  ",
+  "password": "AnaPass123!"
+}
+
+> {%
+    const cookie = response.headers.valueOf("Set-Cookie");
+    const match = cookie ? cookie.match(/JSESSIONID=([^;]+)/) : null;
+    if (response.status === 200 && match) {
+        client.global.set("anaSessionId", match[1]);
+        client.global.clear("anaCsrf");
+        client.log("Sesión 1 renovada; obtener CSRF nuevo en paso 6.");
+    } else {
+        client.log("ERROR: login 1 fallido o sin nueva cookie; no continúes.");
+    }
+%}
+
+
+### 6. ANA — CSRF NUEVO de la sesión 1 después del login (200)
+// @no-cookie-jar
+GET {{baseUrl}}/auth/csrf
+Cookie: JSESSIONID={{anaSessionId}}
+Accept: application/json
+
+> {%
+    if (response.status === 200 && response.body.token) {
+        client.global.set("anaCsrf", response.body.token);
+        client.log("CSRF 1 renovado correctamente.");
+    }
+%}
+
+
+### 7. ANA — /auth/me en sesión 1 (200)
+// @no-cookie-jar
+GET {{baseUrl}}/auth/me
+Cookie: JSESSIONID={{anaSessionId}}
+Accept: application/json
+
+
+### 8. ANA — Sesión 2 INDEPENDIENTE: obtener otra sesión anónima y CSRF
+// @no-cookie-jar
+GET {{baseUrl}}/auth/csrf
+Cookie: JSESSIONID=invalid-ana-session-2
+Accept: application/json
+
+> {%
+    const cookie = response.headers.valueOf("Set-Cookie");
+    const match = cookie ? cookie.match(/JSESSIONID=([^;]+)/) : null;
+    if (response.status === 200 && match && response.body.token) {
+        client.global.set("anaSessionId2", match[1]);
+        client.global.set("anaCsrf2", response.body.token);
+    } else {
+        client.log("ERROR: no se pudo guardar sesión 2 y su CSRF; revisa Set-Cookie.");
+    }
+    client.log("Sesión 2 guardada: " + Boolean(client.global.get("anaSessionId2")));
+    client.log("CSRF 2 guardado: " + Boolean(client.global.get("anaCsrf2")));
+    client.log("Sesiones distintas: " + (client.global.get("anaSessionId") !== client.global.get("anaSessionId2")));
+%}
+
+
+### 9. ANA — Login correcto SESIÓN 2 (200); guardar JSESSIONID renovado
+// @no-cookie-jar
+POST {{baseUrl}}/auth/login
+Cookie: JSESSIONID={{anaSessionId2}}
+X-CSRF-TOKEN: {{anaCsrf2}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "ana.devtrack.test@example.com",
+  "password": "AnaPass123!"
+}
+
+> {%
+    const cookie = response.headers.valueOf("Set-Cookie");
+    const match = cookie ? cookie.match(/JSESSIONID=([^;]+)/) : null;
+    if (response.status === 200 && match) {
+        client.global.set("anaSessionId2", match[1]);
+        client.global.clear("anaCsrf2");
+        client.log("Sesión 2 renovada; obtener CSRF nuevo en paso 10.");
+    } else {
+        client.log("ERROR: login 2 fallido o sin nueva cookie; no continúes.");
+    }
+%}
+
+
+### 10. ANA — CSRF NUEVO de sesión 2 (opcional para GET, útil para otras escrituras)
+// @no-cookie-jar
+GET {{baseUrl}}/auth/csrf
+Cookie: JSESSIONID={{anaSessionId2}}
+Accept: application/json
+
+> {%
+    if (response.status === 200 && response.body.token) {
+        client.global.set("anaCsrf2", response.body.token);
+    }
+%}
+
+
+### 11. ANA — /auth/me en SESIÓN 2 antes del borrado (200)
+// @no-cookie-jar
+GET {{baseUrl}}/auth/me
+Cookie: JSESSIONID={{anaSessionId2}}
+Accept: application/json
+
+
+### 12. ANA — /auth/me en SESIÓN 1 antes del borrado (200)
+// @no-cookie-jar
+GET {{baseUrl}}/auth/me
+Cookie: JSESSIONID={{anaSessionId}}
+Accept: application/json
+
+
+### 13. ANA — Intentar borrar con contraseña incorrecta, sesión 1 (401; NO borra)
+// @no-cookie-jar
+DELETE {{baseUrl}}/auth/me
+Cookie: JSESSIONID={{anaSessionId}}
+X-CSRF-TOKEN: {{anaCsrf}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "password": "WrongPassword123!"
+}
+
+
+### 14. ANA — Comprobar que la cuenta sigue existiendo (200)
+// @no-cookie-jar
+GET {{baseUrl}}/auth/me
+Cookie: JSESSIONID={{anaSessionId2}}
+Accept: application/json
+
+
+### 15. ANA — Intentar borrar SIN CSRF (403; NO borra)
+// @no-cookie-jar
+DELETE {{baseUrl}}/auth/me
+Cookie: JSESSIONID={{anaSessionId}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "password": "AnaPass123!"
+}
+
+
+### 16. ANA — Comprobar que sigue existiendo tras el 403 (200)
+// @no-cookie-jar
+GET {{baseUrl}}/auth/me
+Cookie: JSESSIONID={{anaSessionId2}}
+Accept: application/json
+
+
+### 17. ANA — ELIMINAR CUENTA DEFINITIVAMENTE desde SESIÓN 1 (204)
+# ATENCIÓN: esta petición borra de verdad a Ana, sus bloques y sus problemas.
+// @no-cookie-jar
+DELETE {{baseUrl}}/auth/me
+Cookie: JSESSIONID={{anaSessionId}}
+X-CSRF-TOKEN: {{anaCsrf}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "password": "AnaPass123!"
+}
+
+
+### 18. ANA — /auth/me con SESIÓN 1 ya cerrada (401)
+// @no-cookie-jar
+GET {{baseUrl}}/auth/me
+Cookie: JSESSIONID={{anaSessionId}}
+Accept: application/json
+
+
+### 19. ANA — /auth/me con SESIÓN 2 todavía abierta (401 por ActiveAccountFilter)
+# Esta es la prueba CLAVE: el filtro debe encontrar que el ID ya no existe.
+// @no-cookie-jar
+GET {{baseUrl}}/auth/me
+Cookie: JSESSIONID={{anaSessionId2}}
+Accept: application/json
+
+
+### 20. ANA — Segundo intento con SESIÓN 2, ahora invalidada (401)
+// @no-cookie-jar
+GET {{baseUrl}}/auth/me
+Cookie: JSESSIONID={{anaSessionId2}}
+Accept: application/json
+
+
+### 21. ANA — Obtener nueva sesión anónima y CSRF tras eliminar la cuenta (200)
+# Obtén antes una sesión anónima nueva y su CSRF para evitar un 403.
+// @no-cookie-jar
+GET {{baseUrl}}/auth/csrf
+Cookie: JSESSIONID=invalid-ana-post-delete
+Accept: application/json
+
+> {%
+    const cookie = response.headers.valueOf("Set-Cookie");
+    const match = cookie ? cookie.match(/JSESSIONID=([^;]+)/) : null;
+    if (response.status === 200 && match && response.body.token) {
+        client.global.set("anaPostDeleteSession", match[1]);
+        client.global.set("anaPostDeleteCsrf", response.body.token);
+    }
+%}
+
+
+### 22. ANA — Login tras borrado (401)
+// @no-cookie-jar
+POST {{baseUrl}}/auth/login
+Cookie: JSESSIONID={{anaPostDeleteSession}}
+X-CSRF-TOKEN: {{anaPostDeleteCsrf}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "ana.devtrack.test@example.com",
+  "password": "AnaPass123!"
+}
+
 
 ### ============================
-### STUDY BLOCKS
+### 2. BOB — SESIÓN INDEPENDIENTE
 ### ============================
+# NO reutilizamos la cookie de Ana. Las variables anaSessionId y bobSessionId
+# permiten ir alternando de usuario sin mezclar sus sesiones.
 
-### Create study block
-POST http://localhost:8080/study-blocks
+### BOB - Obtener CSRF y sesión anónima
+// @no-cookie-jar
+GET {{baseUrl}}/auth/csrf
+
+> {%
+    const setCookie = response.headers.valueOf("Set-Cookie");
+    const match = setCookie
+        ? setCookie.match(/JSESSIONID=([^;]+)/)
+        : null;
+
+    if (match) {
+        client.global.set("bobSessionId", match[1]);
+    }
+
+    client.global.set("bobCsrf", response.body.token);
+
+    client.log("Bob session saved: " +
+        Boolean(client.global.get("bobSessionId")));
+
+    client.log("Bob CSRF saved: " +
+        Boolean(client.global.get("bobCsrf")));
+%}
+
+### BOB — Registrar cuenta (201)
+// @no-cookie-jar
+POST {{baseUrl}}/auth/register
+Cookie: JSESSIONID={{bobSessionId}}
+X-CSRF-TOKEN: {{bobCsrf}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "bob.devtrack.test@example.com",
+  "password": "BobPass123!"
+}
+
+### BOB — Login correcto (200)
+POST {{baseUrl}}/auth/login
+Cookie: JSESSIONID={{bobSessionId}}
+X-CSRF-TOKEN: {{bobCsrf}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "bob.devtrack.test@example.com",
+  "password": "BobPass123!"
+}
+
+> {%
+const setCookie = response.headers.valueOf("Set-Cookie");
+if (setCookie) {
+  const match = setCookie.match(/JSESSIONID=([^;]+)/);
+  if (match) client.global.set("bobSessionId", match[1]);
+}
+%}
+
+### BOB — Renovar CSRF después del login
+GET {{baseUrl}}/auth/csrf
+Cookie: JSESSIONID={{bobSessionId}}
+
+> {%
+const setCookie = response.headers.valueOf("Set-Cookie");
+if (setCookie) {
+  const match = setCookie.match(/JSESSIONID=([^;]+)/);
+  if (match) client.global.set("bobSessionId", match[1]);
+}
+client.global.set("bobCsrf", response.body.token);
+%}
+
+### BOB — Consultar /auth/me (200)
+GET {{baseUrl}}/auth/me
+Cookie: JSESSIONID={{bobSessionId}}
+
+### ANA — Verificar que su sesión sigue siendo Ana (200)
+GET {{baseUrl}}/auth/me
+Cookie: JSESSIONID={{anaSessionId}}
+
+### ============================
+### 3. STUDY BLOCKS — POSITIVAS / FILTROS
+### ============================
+# Los IDs se guardan de respuestas 201 para evitar IDs históricos (2, 5, etc.).
+
+### ANA — Crear bloque Java inactivo (201); guardar ID
+POST {{baseUrl}}/study-blocks
+Cookie: JSESSIONID={{anaSessionId}}
+X-CSRF-TOKEN: {{anaCsrf}}
 Content-Type: application/json
 Accept: application/json
 
@@ -19,8 +405,90 @@ Accept: application/json
   "active": false
 }
 
-### Create study block - Empty title (400 Bad Request)
-POST http://localhost:8080/study-blocks
+> {%
+client.global.set("anaBlockId", response.body.id);
+%}
+
+### ANA — Crear bloque Algoritmos activo (201); guardar ID
+POST {{baseUrl}}/study-blocks
+Cookie: JSESSIONID={{anaSessionId}}
+X-CSRF-TOKEN: {{anaCsrf}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "title": "Algoritmos",
+  "active": true
+}
+
+> {%
+client.global.set("anaSecondBlockId", response.body.id);
+%}
+
+### BOB — Crear bloque Python activo (201); guardar ID
+POST {{baseUrl}}/study-blocks
+Cookie: JSESSIONID={{bobSessionId}}
+X-CSRF-TOKEN: {{bobCsrf}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "title": "Python",
+  "active": true
+}
+
+> {%
+client.global.set("bobBlockId", response.body.id);
+%}
+
+### ANA — Listar sus bloques
+GET {{baseUrl}}/study-blocks
+Cookie: JSESSIONID={{anaSessionId}}
+
+### ANA — Solo activos
+GET {{baseUrl}}/study-blocks?active=true
+Cookie: JSESSIONID={{anaSessionId}}
+
+### ANA — Paginados
+GET {{baseUrl}}/study-blocks?page=0&size=2
+Cookie: JSESSIONID={{anaSessionId}}
+
+### ANA — Filtrados y ordenados
+GET {{baseUrl}}/study-blocks?active=true&page=0&size=2&sort=id,asc
+Cookie: JSESSIONID={{anaSessionId}}
+
+### ANA — Consultar bloque propio
+GET {{baseUrl}}/study-blocks/{{anaBlockId}}
+Cookie: JSESSIONID={{anaSessionId}}
+
+### BOB — Listar solo sus bloques
+GET {{baseUrl}}/study-blocks
+Cookie: JSESSIONID={{bobSessionId}}
+
+### BOB — Consultar bloque propio
+GET {{baseUrl}}/study-blocks/{{bobBlockId}}
+Cookie: JSESSIONID={{bobSessionId}}
+
+### ANA — Actualizar bloque propio (200)
+PUT {{baseUrl}}/study-blocks/{{anaBlockId}}
+Cookie: JSESSIONID={{anaSessionId}}
+X-CSRF-TOKEN: {{anaCsrf}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "title": "Java avanzado",
+  "active": true
+}
+
+### ============================
+### 4. STUDY BLOCKS — NEGATIVAS / AUTORIZACIÓN
+### ============================
+
+### ANA — Crear bloque título vacío (400)
+POST {{baseUrl}}/study-blocks
+Cookie: JSESSIONID={{anaSessionId}}
+X-CSRF-TOKEN: {{anaCsrf}}
 Content-Type: application/json
 Accept: application/json
 
@@ -29,39 +497,30 @@ Accept: application/json
   "active": true
 }
 
-### Create study block - Bad Active
-POST http://localhost:8080/study-blocks
+### ANA — Crear bloque active no booleano (400)
+POST {{baseUrl}}/study-blocks
+Cookie: JSESSIONID={{anaSessionId}}
+X-CSRF-TOKEN: {{anaCsrf}}
 Content-Type: application/json
 Accept: application/json
 
 {
   "title": "Python",
   "active": "invalid"
-
 }
-### Get study blocks
-GET http://localhost:8080/study-blocks
 
-### Get active study blocks
-GET http://localhost:8080/study-blocks?active=true
+### ANA — Filtrar active inválido (400)
+GET {{baseUrl}}/study-blocks?active=invalid
+Cookie: JSESSIONID={{anaSessionId}}
 
-### Get study blocks paginated
-GET http://localhost:8080/study-blocks?page=0&size=2
+### ANA — Consultar bloque inexistente (404)
+GET {{baseUrl}}/study-blocks/99999999
+Cookie: JSESSIONID={{anaSessionId}}
 
-### Get study blocks filtered and sorted
-GET http://localhost:8080/study-blocks?active=true&page=0&size=2&sort=id,asc
-
-### Get study blocks - Invalid active
-GET http://localhost:8080/study-blocks?active=invalid
-
-### Get study block by id (exists)
-GET http://localhost:8080/study-blocks/2
-
-### Get study block by id (not found)
-GET http://localhost:8080/study-blocks/99999
-
-### Update study block
-PUT http://localhost:8080/study-blocks/2
+### ANA — Actualizar bloque inexistente (404)
+PUT {{baseUrl}}/study-blocks/99999999
+Cookie: JSESSIONID={{anaSessionId}}
+X-CSRF-TOKEN: {{anaCsrf}}
 Content-Type: application/json
 Accept: application/json
 
@@ -70,28 +529,44 @@ Accept: application/json
   "active": true
 }
 
-### Update non-existing study block
-PUT http://localhost:8080/study-blocks/99999
+### ANA — Eliminar bloque inexistente (404)
+DELETE {{baseUrl}}/study-blocks/99999999
+Cookie: JSESSIONID={{anaSessionId}}
+X-CSRF-TOKEN: {{anaCsrf}}
+
+### BOB — Intentar leer bloque de Ana (404; anti-IDOR)
+GET {{baseUrl}}/study-blocks/{{anaBlockId}}
+Cookie: JSESSIONID={{bobSessionId}}
+
+### BOB — Intentar editar bloque de Ana (404; anti-IDOR)
+PUT {{baseUrl}}/study-blocks/{{anaBlockId}}
+Cookie: JSESSIONID={{bobSessionId}}
+X-CSRF-TOKEN: {{bobCsrf}}
 Content-Type: application/json
 Accept: application/json
 
 {
-  "title": "Python",
-  "active": true
+  "title": "Ataque",
+  "active": false
 }
 
-### Delete existing study block
-DELETE http://localhost:8080/study-blocks/2
+### BOB — Intentar borrar bloque de Ana (404; anti-IDOR)
+DELETE {{baseUrl}}/study-blocks/{{anaBlockId}}
+Cookie: JSESSIONID={{bobSessionId}}
+X-CSRF-TOKEN: {{bobCsrf}}
 
-### Delete non-existing study block
-DELETE http://localhost:8080/study-blocks/99999
+### ANA — Asegurarse de que BOB no alteró su bloque (200)
+GET {{baseUrl}}/study-blocks/{{anaBlockId}}
+Cookie: JSESSIONID={{anaSessionId}}
 
 ### ============================
-### PROBLEMS
+### 5. PROBLEMS — CREAR / LISTAR / MODIFICAR
 ### ============================
 
-### Create Problem
-POST http://localhost:8080/study-blocks/5/problems
+### ANA — Crear Binary Search (201); guardar ID
+POST {{baseUrl}}/study-blocks/{{anaBlockId}}/problems
+Cookie: JSESSIONID={{anaSessionId}}
+X-CSRF-TOKEN: {{anaCsrf}}
 Content-Type: application/json
 Accept: application/json
 
@@ -104,8 +579,121 @@ Accept: application/json
   "url": "https://leetcode.com/problems/binary-search/"
 }
 
-### Create Problem with title only
-POST http://localhost:8080/study-blocks/2/problems
+> {%
+client.global.set("anaProblemId", response.body.id);
+%}
+
+### ANA — Crear Problem con título únicamente (201); guardar ID
+POST {{baseUrl}}/study-blocks/{{anaBlockId}}/problems
+Cookie: JSESSIONID={{anaSessionId}}
+X-CSRF-TOKEN: {{anaCsrf}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "title": "Two Sum"
+}
+
+> {%
+client.global.set("anaSecondProblemId", response.body.id);
+%}
+
+### ANA — Crear tercer Problem (201); guardar ID
+POST {{baseUrl}}/study-blocks/{{anaBlockId}}/problems
+Cookie: JSESSIONID={{anaSessionId}}
+X-CSRF-TOKEN: {{anaCsrf}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "title": "Valid Parentheses",
+  "difficulty": "EASY",
+  "algorithm": "Stack",
+  "solved": true,
+  "notes": "Stack exercise",
+  "url": "https://leetcode.com/problems/valid-parentheses/"
+}
+
+> {%
+client.global.set("anaThirdProblemId", response.body.id);
+%}
+
+### BOB — Crear Problem propio (201); guardar ID
+POST {{baseUrl}}/study-blocks/{{bobBlockId}}/problems
+Cookie: JSESSIONID={{bobSessionId}}
+X-CSRF-TOKEN: {{bobCsrf}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "title": "SQL Joins",
+  "difficulty": "EASY",
+  "algorithm": "SQL",
+  "solved": false,
+  "notes": "INNER JOIN",
+  "url": "https://example.com"
+}
+
+> {%
+client.global.set("bobProblemId", response.body.id);
+%}
+
+### ANA — Listar problemas
+GET {{baseUrl}}/study-blocks/{{anaBlockId}}/problems
+Cookie: JSESSIONID={{anaSessionId}}
+
+### ANA — Filtrar difficulty=EASY
+GET {{baseUrl}}/study-blocks/{{anaBlockId}}/problems?difficulty=EASY
+Cookie: JSESSIONID={{anaSessionId}}
+
+### ANA — Filtrar solved=true
+GET {{baseUrl}}/study-blocks/{{anaBlockId}}/problems?solved=true
+Cookie: JSESSIONID={{anaSessionId}}
+
+### ANA — Paginación
+GET {{baseUrl}}/study-blocks/{{anaBlockId}}/problems?page=0&size=3
+Cookie: JSESSIONID={{anaSessionId}}
+
+### ANA — Orden ascendente
+GET {{baseUrl}}/study-blocks/{{anaBlockId}}/problems?page=0&size=10&sort=id,asc
+Cookie: JSESSIONID={{anaSessionId}}
+
+### ANA — Orden descendente
+GET {{baseUrl}}/study-blocks/{{anaBlockId}}/problems?page=0&size=10&sort=id,desc
+Cookie: JSESSIONID={{anaSessionId}}
+
+### ANA — Filtros combinados
+GET {{baseUrl}}/study-blocks/{{anaBlockId}}/problems?difficulty=EASY&solved=false&page=0&size=2&sort=id,asc
+Cookie: JSESSIONID={{anaSessionId}}
+
+### ANA — Leer problema existente
+GET {{baseUrl}}/study-blocks/{{anaBlockId}}/problems/{{anaProblemId}}
+Cookie: JSESSIONID={{anaSessionId}}
+
+### ANA — Actualizar problema propio (200)
+PUT {{baseUrl}}/study-blocks/{{anaBlockId}}/problems/{{anaProblemId}}
+Cookie: JSESSIONID={{anaSessionId}}
+X-CSRF-TOKEN: {{anaCsrf}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "title": "Binary Search (reviewed)",
+  "difficulty": "MEDIUM",
+  "algorithm": "Binary Search",
+  "solved": true,
+  "notes": "Solved with left/right pointers",
+  "url": "https://leetcode.com/problems/binary-search/"
+}
+
+### ============================
+### 6. PROBLEMS — NEGATIVAS / AUTORIZACIÓN
+### ============================
+
+### ANA — Crear problema en bloque inexistente (404)
+POST {{baseUrl}}/study-blocks/99999999/problems
+Cookie: JSESSIONID={{anaSessionId}}
+X-CSRF-TOKEN: {{anaCsrf}}
 Content-Type: application/json
 Accept: application/json
 
@@ -113,22 +701,10 @@ Accept: application/json
   "title": "Binary Search"
 }
 
-### Create Problem study block not found
-POST http://localhost:8080/study-blocks/1/problems
-Content-Type: application/json
-Accept: application/json
-
-{
-  "title": "Binary Search",
-  "difficulty": "EASY",
-  "algorithm": "Binary Search",
-  "solved": false,
-  "notes": "Review left and right limits",
-  "url": "https://leetcode.com/problems/binary-search/"
-}
-
-### Create problem - Empty title (400 Bad Request)
-POST http://localhost:8080/study-blocks/2/problems
+### ANA — Crear problema título vacío (400)
+POST {{baseUrl}}/study-blocks/{{anaBlockId}}/problems
+Cookie: JSESSIONID={{anaSessionId}}
+X-CSRF-TOKEN: {{anaCsrf}}
 Content-Type: application/json
 Accept: application/json
 
@@ -137,12 +713,14 @@ Accept: application/json
   "difficulty": "EASY",
   "algorithm": "Hash Map",
   "solved": false,
-  "notes": "Testing global exception handler",
+  "notes": "Validation test",
   "url": "https://leetcode.com/problems/two-sum/"
 }
 
-### Create Problem - Bad Difficulty
-POST http://localhost:8080/study-blocks/2/problems
+### ANA — Dificultad inválida en creación (400)
+POST {{baseUrl}}/study-blocks/{{anaBlockId}}/problems
+Cookie: JSESSIONID={{anaSessionId}}
+X-CSRF-TOKEN: {{anaCsrf}}
 Content-Type: application/json
 Accept: application/json
 
@@ -151,62 +729,30 @@ Accept: application/json
   "difficulty": "IMPOSSIBLE",
   "algorithm": "Binary Search",
   "solved": false,
-  "notes": "Review left and right limits",
+  "notes": "Invalid enum",
   "url": "https://leetcode.com/problems/binary-search/"
 }
 
-### Get Problems
-GET http://localhost:8080/study-blocks/5/problems
+### ANA — Filtrar dificultad inválida (400)
+GET {{baseUrl}}/study-blocks/{{anaBlockId}}/problems?difficulty=IMPOSSIBLE
+Cookie: JSESSIONID={{anaSessionId}}
 
-### Get Problems by Difficulty
-GET http://localhost:8080/study-blocks/2/problems?difficulty=EASY
+### ANA — Filtrar solved inválido (400)
+GET {{baseUrl}}/study-blocks/{{anaBlockId}}/problems?solved=invalid
+Cookie: JSESSIONID={{anaSessionId}}
 
-### Get Problem by invalid difficulty
-GET http://localhost:8080/study-blocks/2/problems?difficulty=IMPOSSIBLE
+### ANA — Leer desde bloque inexistente (404)
+GET {{baseUrl}}/study-blocks/99999999/problems/{{anaProblemId}}
+Cookie: JSESSIONID={{anaSessionId}}
 
-### Get Problems by Solved
-GET http://localhost:8080/study-blocks/2/problems?solved=true
+### ANA — Leer problema inexistente (404)
+GET {{baseUrl}}/study-blocks/{{anaBlockId}}/problems/99999999
+Cookie: JSESSIONID={{anaSessionId}}
 
-### Get Problems by invalid solved
-GET http://localhost:8080/study-blocks/2/problems?solved=invalid
-
-### Get Problems paginated
-GET http://localhost:8080/study-blocks/2/problems?page=0&size=3
-
-### Order by id ascending
-GET http://localhost:8080/study-blocks/2/problems?page=0&size=10&sort=id,asc
-
-### Order by id descending
-GET http://localhost:8080/study-blocks/2/problems?page=0&size=10&sort=id,desc
-
-### Get Problems by Difficulty and Solved paginated order by id ascending
-GET http://localhost:8080/study-blocks/2/problems?difficulty=EASY&solved=false&page=0&size=2&sort=id,asc
-
-### Get Problem by id (exists)
-GET http://localhost:8080/study-blocks/2/problems/18
-
-### Get Problem by id (Study block not found)
-GET http://localhost:8080/study-blocks/99/problems/1
-
-### Get Problem by id (Problem not found in study block)
-GET http://localhost:8080/study-blocks/2/problems/99999
-
-### Update problem
-PUT http://localhost:8080/study-blocks/2/problems/19
-Content-Type: application/json
-Accept: application/json
-
-{
-  "title": "Longest Substring Without Repeating Characters",
-  "difficulty": "MEDIUM",
-  "algorithm": "SLIDING_WINDOW",
-  "solved": true,
-  "notes": "Solved using a sliding window with a HashSet.",
-  "url": "https://leetcode.com/problems/binary-search/"
-}
-
-### Update non-existing study block
-PUT http://localhost:8080/study-blocks/99999/problems/1
+### ANA — Actualizar bloque inexistente desde problems (404)
+PUT {{baseUrl}}/study-blocks/99999999/problems/{{anaProblemId}}
+Cookie: JSESSIONID={{anaSessionId}}
+X-CSRF-TOKEN: {{anaCsrf}}
 Content-Type: application/json
 Accept: application/json
 
@@ -219,8 +765,10 @@ Accept: application/json
   "url": "https://example.com"
 }
 
-### Update non-existing problem
-PUT http://localhost:8080/study-blocks/1/problems/99999
+### ANA — Actualizar problema inexistente (404)
+PUT {{baseUrl}}/study-blocks/{{anaBlockId}}/problems/99999999
+Cookie: JSESSIONID={{anaSessionId}}
+X-CSRF-TOKEN: {{anaCsrf}}
 Content-Type: application/json
 Accept: application/json
 
@@ -233,101 +781,313 @@ Accept: application/json
   "url": "https://example.com"
 }
 
-### Delete existing problem
-DELETE http://localhost:8080/study-blocks/2/problems/19
+### ANA — Eliminar problema de bloque inexistente (404)
+DELETE {{baseUrl}}/study-blocks/99999999/problems/{{anaProblemId}}
+Cookie: JSESSIONID={{anaSessionId}}
+X-CSRF-TOKEN: {{anaCsrf}}
 
-### Delete non-existing study block
-DELETE http://localhost:8080/study-blocks/99999/problems/19
+### ANA — Eliminar problema inexistente (404)
+DELETE {{baseUrl}}/study-blocks/{{anaBlockId}}/problems/99999999
+Cookie: JSESSIONID={{anaSessionId}}
+X-CSRF-TOKEN: {{anaCsrf}}
 
-### Delete non-existing problem
-DELETE http://localhost:8080/study-blocks/2/problems/99999
+### BOB — Leer problemas de bloque de Ana (404)
+GET {{baseUrl}}/study-blocks/{{anaBlockId}}/problems
+Cookie: JSESSIONID={{bobSessionId}}
 
-### Bulk delete - Success
-POST http://localhost:8080/study-blocks/2/problems/bulk-delete
+### BOB — Leer problema de Ana (404)
+GET {{baseUrl}}/study-blocks/{{anaBlockId}}/problems/{{anaProblemId}}
+Cookie: JSESSIONID={{bobSessionId}}
+
+### BOB — Crear problema en bloque de Ana (404)
+POST {{baseUrl}}/study-blocks/{{anaBlockId}}/problems
+Cookie: JSESSIONID={{bobSessionId}}
+X-CSRF-TOKEN: {{bobCsrf}}
 Content-Type: application/json
+Accept: application/json
 
 {
-  "problemIds": [21, 22]
+  "title": "Unauthorized problem"
 }
 
-
-### Bulk delete - Study block does not exist
-POST http://localhost:8080/study-blocks/99999/problems/bulk-delete
+### BOB — Modificar problema de Ana (404)
+PUT {{baseUrl}}/study-blocks/{{anaBlockId}}/problems/{{anaProblemId}}
+Cookie: JSESSIONID={{bobSessionId}}
+X-CSRF-TOKEN: {{bobCsrf}}
 Content-Type: application/json
+Accept: application/json
 
 {
-  "problemIds": [21, 22]
+  "title": "Hijacked",
+  "difficulty": "EASY",
+  "algorithm": "ARRAY",
+  "solved": false,
+  "notes": "Should be rejected",
+  "url": "https://example.com"
 }
 
+### BOB — Eliminar problema de Ana (404)
+DELETE {{baseUrl}}/study-blocks/{{anaBlockId}}/problems/{{anaProblemId}}
+Cookie: JSESSIONID={{bobSessionId}}
+X-CSRF-TOKEN: {{bobCsrf}}
 
-### Bulk delete - Problem does not exist
-POST http://localhost:8080/study-blocks/2/problems/bulk-delete
+### ANA — Usar problemId de Bob bajo bloque propio (404)
+GET {{baseUrl}}/study-blocks/{{anaBlockId}}/problems/{{bobProblemId}}
+Cookie: JSESSIONID={{anaSessionId}}
+
+### ANA — No puede borrar su bloque no vacío (409)
+DELETE {{baseUrl}}/study-blocks/{{anaBlockId}}
+Cookie: JSESSIONID={{anaSessionId}}
+X-CSRF-TOKEN: {{anaCsrf}}
+
+### ============================
+### 7. BULK DELETE / CLEAR — PRUEBAS
+### ============================
+# Para borrar varios IDs se interpolan números (sin comillas) en JSON.
+# Estas operaciones son destructivas: ejecutar solamente al final.
+
+### ANA — Bulk: bloque inexistente (404)
+POST {{baseUrl}}/study-blocks/99999999/problems/bulk-delete
+Cookie: JSESSIONID={{anaSessionId}}
+X-CSRF-TOKEN: {{anaCsrf}}
 Content-Type: application/json
+Accept: application/json
 
 {
-  "problemIds": [1, 99999]
+  "problemIds": [{{anaProblemId}}, {{anaSecondProblemId}}]
 }
 
-
-### Bulk delete - Problem belongs to another study block
-POST http://localhost:8080/study-blocks/1/problems/bulk-delete
+### ANA — Bulk: problem ID inexistente (404)
+POST {{baseUrl}}/study-blocks/{{anaBlockId}}/problems/bulk-delete
+Cookie: JSESSIONID={{anaSessionId}}
+X-CSRF-TOKEN: {{anaCsrf}}
 Content-Type: application/json
+Accept: application/json
 
 {
-  "problemIds": [1, 5]
+  "problemIds": [{{anaProblemId}}, 99999999]
 }
 
-
-### Bulk delete - Empty problem IDs
-POST http://localhost:8080/study-blocks/2/problems/bulk-delete
+### ANA — Bulk: problem pertenece a bloque de Bob (404)
+POST {{baseUrl}}/study-blocks/{{anaBlockId}}/problems/bulk-delete
+Cookie: JSESSIONID={{anaSessionId}}
+X-CSRF-TOKEN: {{anaCsrf}}
 Content-Type: application/json
+Accept: application/json
+
+{
+  "problemIds": [{{anaProblemId}}, {{bobProblemId}}]
+}
+
+### BOB — Bulk: borrar problemas de Ana mediante su bloque (404)
+POST {{baseUrl}}/study-blocks/{{anaBlockId}}/problems/bulk-delete
+Cookie: JSESSIONID={{bobSessionId}}
+X-CSRF-TOKEN: {{bobCsrf}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "problemIds": [{{anaProblemId}}]
+}
+
+### ANA — Bulk: lista vacía (400)
+POST {{baseUrl}}/study-blocks/{{anaBlockId}}/problems/bulk-delete
+Cookie: JSESSIONID={{anaSessionId}}
+X-CSRF-TOKEN: {{anaCsrf}}
+Content-Type: application/json
+Accept: application/json
 
 {
   "problemIds": []
 }
 
-
-### Bulk delete - Problem IDs is null
-POST http://localhost:8080/study-blocks/2/problems/bulk-delete
+### ANA — Bulk: IDs nulos (400)
+POST {{baseUrl}}/study-blocks/{{anaBlockId}}/problems/bulk-delete
+Cookie: JSESSIONID={{anaSessionId}}
+X-CSRF-TOKEN: {{anaCsrf}}
 Content-Type: application/json
+Accept: application/json
 
 {
   "problemIds": null
 }
 
+### ANA — Bulk: elemento null (400)
+POST {{baseUrl}}/study-blocks/{{anaBlockId}}/problems/bulk-delete
+Cookie: JSESSIONID={{anaSessionId}}
+X-CSRF-TOKEN: {{anaCsrf}}
+Content-Type: application/json
+Accept: application/json
 
-### Bulk delete - Problem ID is null
-POST http://localhost:8080/study-blocks/2/problems/bulk-delete
+{
+  "problemIds": [{{anaProblemId}}, null, {{anaSecondProblemId}}]
+}
+
+### BOB — Clear: intentar vaciar bloque de Ana (404)
+DELETE {{baseUrl}}/study-blocks/{{anaBlockId}}/problems/clear
+Cookie: JSESSIONID={{bobSessionId}}
+X-CSRF-TOKEN: {{bobCsrf}}
+
+### ANA — Clear: bloque inexistente (404)
+DELETE {{baseUrl}}/study-blocks/99999999/problems/clear
+Cookie: JSESSIONID={{anaSessionId}}
+X-CSRF-TOKEN: {{anaCsrf}}
+
+### ANA — Bulk: IDs duplicados (según Set del DTO: se deduplican)
+POST {{baseUrl}}/study-blocks/{{anaBlockId}}/problems/bulk-delete
+Cookie: JSESSIONID={{anaSessionId}}
+X-CSRF-TOKEN: {{anaCsrf}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "problemIds": [{{anaSecondProblemId}}, {{anaSecondProblemId}}]
+}
+
+### ANA — Bulk: eliminar un problema (204)
+POST {{baseUrl}}/study-blocks/{{anaBlockId}}/problems/bulk-delete
+Cookie: JSESSIONID={{anaSessionId}}
+X-CSRF-TOKEN: {{anaCsrf}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "problemIds": [{{anaThirdProblemId}}]
+}
+
+### ANA — Bulk: eliminar problema restante (204)
+POST {{baseUrl}}/study-blocks/{{anaBlockId}}/problems/bulk-delete
+Cookie: JSESSIONID={{anaSessionId}}
+X-CSRF-TOKEN: {{anaCsrf}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "problemIds": [{{anaProblemId}}]
+}
+
+### ANA — Crear dos problemas nuevos antes de Bulk Success (201)
+POST {{baseUrl}}/study-blocks/{{anaBlockId}}/problems
+Cookie: JSESSIONID={{anaSessionId}}
+X-CSRF-TOKEN: {{anaCsrf}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "title": "Quick Sort"
+}
+
+> {%
+client.global.set("anaBulkProblem1", response.body.id);
+%}
+
+### ANA — Crear segundo problema para Bulk Success (201)
+POST {{baseUrl}}/study-blocks/{{anaBlockId}}/problems
+Cookie: JSESSIONID={{anaSessionId}}
+X-CSRF-TOKEN: {{anaCsrf}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "title": "Merge Sort"
+}
+
+> {%
+client.global.set("anaBulkProblem2", response.body.id);
+%}
+
+### ANA — Bulk delete: dos problemas (204)
+POST {{baseUrl}}/study-blocks/{{anaBlockId}}/problems/bulk-delete
+Cookie: JSESSIONID={{anaSessionId}}
+X-CSRF-TOKEN: {{anaCsrf}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "problemIds": [{{anaBulkProblem1}}, {{anaBulkProblem2}}]
+}
+
+### ANA — Crear problema temporal para clear (201)
+POST {{baseUrl}}/study-blocks/{{anaBlockId}}/problems
+Cookie: JSESSIONID={{anaSessionId}}
+X-CSRF-TOKEN: {{anaCsrf}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "title": "Clear test problem"
+}
+
+### ANA — Clear: borrar todos los problemas del bloque (204)
+DELETE {{baseUrl}}/study-blocks/{{anaBlockId}}/problems/clear
+Cookie: JSESSIONID={{anaSessionId}}
+X-CSRF-TOKEN: {{anaCsrf}}
+
+### ANA — Eliminar bloque vacío tras clear (204)
+DELETE {{baseUrl}}/study-blocks/{{anaBlockId}}
+Cookie: JSESSIONID={{anaSessionId}}
+X-CSRF-TOKEN: {{anaCsrf}}
+
+### BOB — Eliminar problema existente (204)
+DELETE {{baseUrl}}/study-blocks/{{bobBlockId}}/problems/{{bobProblemId}}
+Cookie: JSESSIONID={{bobSessionId}}
+X-CSRF-TOKEN: {{bobCsrf}}
+
+### BOB — Eliminar bloque vacío (204)
+DELETE {{baseUrl}}/study-blocks/{{bobBlockId}}
+Cookie: JSESSIONID={{bobSessionId}}
+X-CSRF-TOKEN: {{bobCsrf}}
+
+### ============================
+### 8. CSRF / LOGOUT — EJECUTAR AL FINAL
+### ============================
+# El valor de anaCsrf tras el login ya es el token nuevo.
+# Para comprobar un token inválido se usa un valor artificial.
+
+### ANA — POST sin token CSRF (esperado 403)
+POST {{baseUrl}}/study-blocks
+Cookie: JSESSIONID={{anaSessionId}}
 Content-Type: application/json
 
 {
-  "problemIds": [1, null, 2]
+  "title": "Must not be created",
+  "active": true
 }
 
-
-### Bulk delete - Single problem
-POST http://localhost:8080/study-blocks/2/problems/bulk-delete
+### ANA — POST con CSRF inválido (esperado 403)
+POST {{baseUrl}}/study-blocks
+Cookie: JSESSIONID={{anaSessionId}}
+X-CSRF-TOKEN: deliberately-invalid-csrf-token
 Content-Type: application/json
 
 {
-  "problemIds": [18]
+  "title": "Must not be created",
+  "active": true
 }
 
+### ANA — Logout (204)
+POST {{baseUrl}}/auth/logout
+Cookie: JSESSIONID={{anaSessionId}}
+X-CSRF-TOKEN: {{anaCsrf}}
 
-### Bulk delete - Duplicate problem IDs
-POST http://localhost:8080/study-blocks/2/problems/bulk-delete
-Content-Type: application/json
+### ANA — /auth/me después de logout (401)
+GET {{baseUrl}}/auth/me
+Cookie: JSESSIONID={{anaSessionId}}
 
-{
-  "problemIds": [20, 20]
-}
+### BOB — Logout (204)
+POST {{baseUrl}}/auth/logout
+Cookie: JSESSIONID={{bobSessionId}}
+X-CSRF-TOKEN: {{bobCsrf}}
 
-### Clear problems - Success
-DELETE http://localhost:8080/study-blocks/5/problems/clear
+### BOB — /auth/me después de logout (401)
+GET {{baseUrl}}/auth/me
+Cookie: JSESSIONID={{bobSessionId}}
 
-### Clear problems - Suty block does not exist
-DELETE http://localhost:8080/study-blocks/99999/problems/clear
-
-
-
+# NOTAS:
+# - Las variables client.global se conservan en la sesión del HTTP Client; si se borran, repetir preparación.
+# - Los endpoints que devuelven 400 dependen de las validaciones y conversión de parámetros vigentes.
+# - Si el 401/403 no llega con el JSON esperado, revisar SecurityFilterChain / error handling.
+# - No ejecutar las pruebas destructivas fuera de la base de datos de desarrollo.
+# - El campo «algorithm» se deja en texto, como en los ejemplos originales.
+# - Si un DTO no permite «title» únicamente, adaptar esa prueba según sus validaciones.
 

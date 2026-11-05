@@ -6,9 +6,14 @@ import com.devtrack.backend.exception.StudyBlockNotFoundException;
 import com.devtrack.backend.model.Difficulty;
 import com.devtrack.backend.model.Problem;
 import com.devtrack.backend.model.StudyBlock;
+import com.devtrack.backend.model.AppUser;
 import com.devtrack.backend.repository.ProblemRepository;
 import com.devtrack.backend.repository.StudyBlockRepository;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
@@ -31,6 +36,25 @@ class ProblemServiceTest {
     @Mock
     private StudyBlockRepository studyBlockRepository;
 
+    @Mock
+    private AuthService authService;
+
+    private final AppUser currentUser = new AppUser(101L, "alice@example.com", "password-hash");
+
+    @BeforeEach
+    void setUp() {
+        var context = SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(UsernamePasswordAuthenticationToken.authenticated(
+                currentUser.getEmail(), null, java.util.List.of()));
+        SecurityContextHolder.setContext(context);
+        when(authService.getUserByEmail(currentUser.getEmail())).thenReturn(currentUser);
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
+    }
+
     @InjectMocks
     private ProblemService problemService;
 
@@ -49,7 +73,8 @@ class ProblemServiceTest {
         StudyBlock studyBlock = new StudyBlock(
                 1L,
                 "Title",
-                false
+                false,
+                currentUser
         );
 
         Problem savedProblem = new Problem (
@@ -62,7 +87,7 @@ class ProblemServiceTest {
                 "Url"
         );
 
-        when(studyBlockRepository.findById(1L)).thenReturn(Optional.of(studyBlock));
+        when(studyBlockRepository.findByIdAndUserId(1L, currentUser.getId())).thenReturn(Optional.of(studyBlock));
         when(problemRepository.save(any(Problem.class))).thenReturn(savedProblem);
 
         ProblemResponse problemResponse = problemService.createProblem(1L, request);
@@ -78,7 +103,7 @@ class ProblemServiceTest {
         ArgumentCaptor<Problem> problemCaptor = ArgumentCaptor.forClass(Problem.class);
 
         verify(problemRepository).save(problemCaptor.capture());
-        verify(studyBlockRepository).findById(1L);
+        verify(studyBlockRepository).findByIdAndUserId(1L, currentUser.getId());
 
         Problem problemToSave = problemCaptor.getValue();
 
@@ -104,7 +129,7 @@ class ProblemServiceTest {
         request.setNotes("Notes");
         request.setUrl("Url");
 
-        when(studyBlockRepository.findById(99L)).thenReturn(Optional.empty());
+        when(studyBlockRepository.findByIdAndUserId(99L, currentUser.getId())).thenReturn(Optional.empty());
 
         StudyBlockNotFoundException exception = assertThrows(StudyBlockNotFoundException.class,
                 () -> problemService.createProblem(99L, request));
@@ -112,7 +137,7 @@ class ProblemServiceTest {
         assertEquals("Study block with id 99 was not found",
                 exception.getMessage());
 
-        verify(studyBlockRepository).findById(99L);
+        verify(studyBlockRepository).findByIdAndUserId(99L, currentUser.getId());
         verify(problemRepository, never()).save(any(Problem.class));
     }
 
@@ -143,14 +168,15 @@ class ProblemServiceTest {
         StudyBlock studyBlock = new StudyBlock(
                 1L,
                 "Title",
-                true
+                true,
+                currentUser
         );
 
         Pageable pageable = PageRequest.of(0, 2);
 
         Page<Problem> page = new PageImpl<>(problems, pageable, 5);
 
-        when(studyBlockRepository.findById(1L)).thenReturn(Optional.of(studyBlock));
+        when(studyBlockRepository.findByIdAndUserId(1L, currentUser.getId())).thenReturn(Optional.of(studyBlock));
         when(problemRepository.findByStudyBlockId(1L, pageable)).thenReturn(page);
 
         PageResponse<ProblemResponse> response = problemService.getProblems(1L,null, null, pageable);
@@ -182,7 +208,7 @@ class ProblemServiceTest {
         assertEquals(5, response.getTotalElements());
         assertEquals(3, response.getTotalPages());
 
-        verify(studyBlockRepository).findById(1L);
+        verify(studyBlockRepository).findByIdAndUserId(1L, currentUser.getId());
         verify(problemRepository).findByStudyBlockId(1L, pageable);
         verify(problemRepository, never()).findByStudyBlockIdAndDifficulty(eq(1L), any(Difficulty.class), eq(pageable));
         verify(problemRepository, never()).findByStudyBlockIdAndSolved(eq(1L), anyBoolean(), eq(pageable));
@@ -194,14 +220,14 @@ class ProblemServiceTest {
 
         Pageable pageable = PageRequest.of(0, 2);
 
-        when(studyBlockRepository.findById(99L)).thenReturn(Optional.empty());
+        when(studyBlockRepository.findByIdAndUserId(99L, currentUser.getId())).thenReturn(Optional.empty());
 
         StudyBlockNotFoundException exception = assertThrows(StudyBlockNotFoundException.class,
                 () -> problemService.getProblems(99L, null, null, pageable));
 
         assertEquals("Study block with id 99 was not found", exception.getMessage());
 
-        verify(studyBlockRepository).findById(99L);
+        verify(studyBlockRepository).findByIdAndUserId(99L, currentUser.getId());
         verifyNoInteractions(problemRepository);
     }
 
@@ -210,14 +236,15 @@ class ProblemServiceTest {
         StudyBlock studyBlock = new StudyBlock(
                 1L,
                 "Title",
-                false
+                false,
+                currentUser
         );
 
         Pageable pageable = PageRequest.of(0, 2);
 
         Page<Problem> page = new PageImpl<>(Collections.emptyList(), pageable, 0);
 
-        when(studyBlockRepository.findById(1L)).thenReturn(Optional.of(studyBlock));
+        when(studyBlockRepository.findByIdAndUserId(1L, currentUser.getId())).thenReturn(Optional.of(studyBlock));
         when(problemRepository.findByStudyBlockId(1L, pageable)).thenReturn(page);
 
         PageResponse<ProblemResponse> response = problemService.getProblems(1L,null, null, pageable);
@@ -228,7 +255,7 @@ class ProblemServiceTest {
         assertEquals(0, response.getTotalElements());
         assertEquals(0, response.getTotalPages());
 
-        verify(studyBlockRepository).findById(1L);
+        verify(studyBlockRepository).findByIdAndUserId(1L, currentUser.getId());
         verify(problemRepository).findByStudyBlockId(1L, pageable);
         verify(problemRepository, never()).findByStudyBlockIdAndDifficulty(eq(1L), any(Difficulty.class), eq(pageable));
         verify(problemRepository, never()).findByStudyBlockIdAndSolved(eq(1L), anyBoolean(), eq(pageable));
@@ -262,14 +289,15 @@ class ProblemServiceTest {
         StudyBlock studyBlock = new StudyBlock(
                 1L,
                 "Title",
-                false
+                false,
+                currentUser
         );
 
         Pageable pageable = PageRequest.of(0, 2);
 
         Page<Problem> page = new PageImpl<>(problems, pageable, 5);
 
-        when(studyBlockRepository.findById(1L)).thenReturn(Optional.of(studyBlock));
+        when(studyBlockRepository.findByIdAndUserId(1L, currentUser.getId())).thenReturn(Optional.of(studyBlock));
         when(problemRepository.findByStudyBlockIdAndDifficulty(1L, Difficulty.EASY, pageable)).thenReturn(page);
 
         PageResponse<ProblemResponse> response = problemService.getProblems(1L, Difficulty.EASY, null, pageable);
@@ -301,7 +329,7 @@ class ProblemServiceTest {
         assertEquals(5, response.getTotalElements());
         assertEquals(3, response.getTotalPages());
 
-        verify(studyBlockRepository).findById(1L);
+        verify(studyBlockRepository).findByIdAndUserId(1L, currentUser.getId());
         verify(problemRepository).findByStudyBlockIdAndDifficulty(eq(1L), eq(Difficulty.EASY), eq(pageable));
         verify(problemRepository, never()).findByStudyBlockId(eq(1L), eq(pageable));
         verify(problemRepository, never()).findByStudyBlockIdAndSolved(eq(1L), anyBoolean(), eq(pageable));
@@ -335,14 +363,15 @@ class ProblemServiceTest {
         StudyBlock studyBlock = new StudyBlock(
                 1L,
                 "Title",
-                false
+                false,
+                currentUser
         );
 
         Pageable pageable = PageRequest.of(0, 2);
 
         Page<Problem> page = new PageImpl<>(problems, pageable, 5);
 
-        when(studyBlockRepository.findById(1L)).thenReturn(Optional.of(studyBlock));
+        when(studyBlockRepository.findByIdAndUserId(1L, currentUser.getId())).thenReturn(Optional.of(studyBlock));
         when(problemRepository.findByStudyBlockIdAndSolved(1L, true, pageable)).thenReturn(page);
 
         PageResponse<ProblemResponse> response = problemService.getProblems(1L,null, true, pageable);
@@ -374,7 +403,7 @@ class ProblemServiceTest {
         assertEquals(5, response.getTotalElements());
         assertEquals(3, response.getTotalPages());
 
-        verify(studyBlockRepository).findById(1L);
+        verify(studyBlockRepository).findByIdAndUserId(1L, currentUser.getId());
         verify(problemRepository).findByStudyBlockIdAndSolved(1L, true, pageable);
         verify(problemRepository, never()).findByStudyBlockId(1L, pageable);
         verify(problemRepository, never()).findByStudyBlockIdAndDifficulty(eq(1L), any(Difficulty.class), eq(pageable));
@@ -408,14 +437,15 @@ class ProblemServiceTest {
         StudyBlock studyBlock = new StudyBlock(
                 1L,
                 "Title",
-                false
+                false,
+                currentUser
         );
 
         Pageable pageable = PageRequest.of(0, 2);
 
         Page<Problem> page = new PageImpl<>(problems, pageable, 5);
 
-        when(studyBlockRepository.findById(1L)).thenReturn(Optional.of(studyBlock));
+        when(studyBlockRepository.findByIdAndUserId(1L, currentUser.getId())).thenReturn(Optional.of(studyBlock));
         when(problemRepository.findByStudyBlockIdAndDifficultyAndSolved(1L, Difficulty.EASY, true, pageable)).thenReturn(page);
 
         PageResponse<ProblemResponse> response = problemService.getProblems(1L, Difficulty.EASY, true, pageable);
@@ -447,7 +477,7 @@ class ProblemServiceTest {
         assertEquals(5, response.getTotalElements());
         assertEquals(3, response.getTotalPages());
 
-        verify(studyBlockRepository).findById(1L);
+        verify(studyBlockRepository).findByIdAndUserId(1L, currentUser.getId());
         verify(problemRepository).findByStudyBlockIdAndDifficultyAndSolved(1L, Difficulty.EASY, true, pageable);
         verify(problemRepository, never()).findByStudyBlockId(1L, pageable);
         verify(problemRepository, never()).findByStudyBlockIdAndDifficulty(eq(1L), any(Difficulty.class), eq(pageable));
@@ -469,10 +499,11 @@ class ProblemServiceTest {
         StudyBlock studyBlock = new StudyBlock(
                 1L,
                 "Title",
-                true
+                true,
+                currentUser
         );
 
-        when(studyBlockRepository.findById(1L)).thenReturn(Optional.of(studyBlock));
+        when(studyBlockRepository.findByIdAndUserId(1L, currentUser.getId())).thenReturn(Optional.of(studyBlock));
         when(problemRepository.findByIdAndStudyBlockId(1L, 1L)).thenReturn(Optional.of(problem));
 
         ProblemResponse problemResponse = problemService.getProblemById(1L, 1L);
@@ -485,14 +516,14 @@ class ProblemServiceTest {
         assertEquals("Notes", problemResponse.getNotes());
         assertEquals("Url", problemResponse.getUrl());
 
-        verify(studyBlockRepository).findById(1L);
+        verify(studyBlockRepository).findByIdAndUserId(1L, currentUser.getId());
         verify(problemRepository).findByIdAndStudyBlockId(1L, 1L);
     }
 
     @Test
     void getProblemByIdShouldThrowExceptionWhenStudyBlockDoesNotExist() {
 
-        when(studyBlockRepository.findById(99L)).thenReturn(Optional.empty());
+        when(studyBlockRepository.findByIdAndUserId(99L, currentUser.getId())).thenReturn(Optional.empty());
 
         StudyBlockNotFoundException exception = assertThrows(
                 StudyBlockNotFoundException.class,
@@ -501,7 +532,7 @@ class ProblemServiceTest {
 
         assertEquals("Study block with id 99 was not found", exception.getMessage());
 
-        verify(studyBlockRepository).findById(99L);
+        verify(studyBlockRepository).findByIdAndUserId(99L, currentUser.getId());
         verify(problemRepository, never()).findByIdAndStudyBlockId(anyLong(),anyLong());
     }
 
@@ -510,10 +541,11 @@ class ProblemServiceTest {
         StudyBlock studyBlock = new StudyBlock(
                 1L,
                 "Title",
-                false
+                false,
+                currentUser
         );
 
-        when(studyBlockRepository.findById(1L)).thenReturn(Optional.of(studyBlock));
+        when(studyBlockRepository.findByIdAndUserId(1L, currentUser.getId())).thenReturn(Optional.of(studyBlock));
         when(problemRepository.findByIdAndStudyBlockId(99L, 1L)).thenReturn(Optional.empty());
 
         ProblemNotFoundException exception = assertThrows(
@@ -523,7 +555,7 @@ class ProblemServiceTest {
 
         assertEquals("Problem with id 99 was not found in study block 1", exception.getMessage());
 
-        verify(studyBlockRepository).findById(1L);
+        verify(studyBlockRepository).findByIdAndUserId(1L, currentUser.getId());
         verify(problemRepository).findByIdAndStudyBlockId(99L, 1L);
     }
 
@@ -561,10 +593,11 @@ class ProblemServiceTest {
         StudyBlock studyBlock = new StudyBlock(
                 5L,
                 "Title",
-                false
+                false,
+                currentUser
         );
 
-        when(studyBlockRepository.findById(5L)).thenReturn(Optional.of(studyBlock));
+        when(studyBlockRepository.findByIdAndUserId(5L, currentUser.getId())).thenReturn(Optional.of(studyBlock));
         when(problemRepository.findByIdAndStudyBlockId(1L, 5L)).thenReturn(Optional.of(problem));
         when(problemRepository.save(any(Problem.class))).thenReturn(updatedProblem);
 
@@ -580,7 +613,7 @@ class ProblemServiceTest {
 
         ArgumentCaptor<Problem> problemCaptor = ArgumentCaptor.forClass(Problem.class);
 
-        verify(studyBlockRepository).findById(5L);
+        verify(studyBlockRepository).findByIdAndUserId(5L, currentUser.getId());
         verify(problemRepository).findByIdAndStudyBlockId(1L, 5L);
         verify(problemRepository).save(problemCaptor.capture());
 
@@ -606,14 +639,14 @@ class ProblemServiceTest {
         request.setNotes("Updated Notes");
         request.setUrl("Updated Url");
 
-        when(studyBlockRepository.findById(99L)).thenReturn(Optional.empty());
+        when(studyBlockRepository.findByIdAndUserId(99L, currentUser.getId())).thenReturn(Optional.empty());
 
         StudyBlockNotFoundException exception = assertThrows(StudyBlockNotFoundException.class,
                 () -> problemService.updateProblem(1L, 99L, request));
 
         assertEquals("Study block with id 99 was not found", exception.getMessage());
 
-        verify(studyBlockRepository).findById(99L);
+        verify(studyBlockRepository).findByIdAndUserId(99L, currentUser.getId());
         verify(problemRepository, never()).findByIdAndStudyBlockId(1L, 99L);
         verify(problemRepository, never()).save(any(Problem.class));
     }
@@ -632,10 +665,11 @@ class ProblemServiceTest {
         StudyBlock studyBlock = new StudyBlock(
                 1L,
                 "Title",
-                false
+                false,
+                currentUser
         );
 
-        when(studyBlockRepository.findById(1L)).thenReturn(Optional.of(studyBlock));
+        when(studyBlockRepository.findByIdAndUserId(1L, currentUser.getId())).thenReturn(Optional.of(studyBlock));
         when(problemRepository.findByIdAndStudyBlockId(99L, 1L)).thenReturn(Optional.empty());
 
         ProblemNotFoundException exception = assertThrows(ProblemNotFoundException.class,
@@ -643,7 +677,7 @@ class ProblemServiceTest {
 
         assertEquals("Problem with id 99 was not found in study block 1", exception.getMessage());
 
-        verify(studyBlockRepository).findById(1L);
+        verify(studyBlockRepository).findByIdAndUserId(1L, currentUser.getId());
         verify(problemRepository).findByIdAndStudyBlockId(99L, 1L);
         verify(problemRepository, never()).save(any(Problem.class));
     }
@@ -653,7 +687,8 @@ class ProblemServiceTest {
         StudyBlock studyBlock = new StudyBlock(
                 5L,
                 "Title",
-                false
+                false,
+                currentUser
         );
 
         Problem problem = new Problem(
@@ -666,12 +701,12 @@ class ProblemServiceTest {
                 "Url"
         );
 
-        when(studyBlockRepository.findById(5L)).thenReturn(Optional.of(studyBlock));
+        when(studyBlockRepository.findByIdAndUserId(5L, currentUser.getId())).thenReturn(Optional.of(studyBlock));
         when(problemRepository.findByIdAndStudyBlockId(1L, 5L)).thenReturn(Optional.of(problem));
 
         problemService.deleteProblem(1L, 5L);
 
-        verify(studyBlockRepository).findById(5L);
+        verify(studyBlockRepository).findByIdAndUserId(5L, currentUser.getId());
         verify(problemRepository).findByIdAndStudyBlockId(1L, 5L);
         verify(problemRepository).delete(problem);
     }
@@ -679,14 +714,14 @@ class ProblemServiceTest {
     @Test
     void deleteProblemShouldThrowStudyBlockNotFoundExceptionWhenStudyBlockDoesNotExist() {
 
-        when(studyBlockRepository.findById(99L)).thenReturn(Optional.empty());
+        when(studyBlockRepository.findByIdAndUserId(99L, currentUser.getId())).thenReturn(Optional.empty());
 
         StudyBlockNotFoundException exception = assertThrows(StudyBlockNotFoundException.class,
                 () -> problemService.deleteProblem(1L, 99L));
 
         assertEquals("Study block with id 99 was not found", exception.getMessage());
 
-        verify(studyBlockRepository).findById(99L);
+        verify(studyBlockRepository).findByIdAndUserId(99L, currentUser.getId());
         verify(problemRepository, never()).findByIdAndStudyBlockId(1L, 99L);
         verify(problemRepository, never()).delete(any(Problem.class));
     }
@@ -696,10 +731,11 @@ class ProblemServiceTest {
         StudyBlock studyBlock = new StudyBlock(
                 1L,
                 "Title",
-                false
+                false,
+                currentUser
         );
 
-        when(studyBlockRepository.findById(1L)).thenReturn(Optional.of(studyBlock));
+        when(studyBlockRepository.findByIdAndUserId(1L, currentUser.getId())).thenReturn(Optional.of(studyBlock));
         when(problemRepository.findByIdAndStudyBlockId(99L, 1L)).thenReturn(Optional.empty());
 
         ProblemNotFoundException exception = assertThrows(ProblemNotFoundException.class,
@@ -707,7 +743,7 @@ class ProblemServiceTest {
 
         assertEquals("Problem with id 99 was not found in study block 1", exception.getMessage());
 
-        verify(studyBlockRepository).findById(1L);
+        verify(studyBlockRepository).findByIdAndUserId(1L, currentUser.getId());
         verify(problemRepository).findByIdAndStudyBlockId(99L, 1L);
         verify(problemRepository, never()).delete(any(Problem.class));
     }
@@ -717,7 +753,8 @@ class ProblemServiceTest {
         StudyBlock studyBlock = new StudyBlock(
                 1L,
                 "Title",
-                false
+                false,
+                currentUser
         );
 
         Problem problem1 = new Problem(
@@ -748,12 +785,12 @@ class ProblemServiceTest {
 
         request.setProblemIds(problemIds);
 
-        when(studyBlockRepository.findById(1L)).thenReturn(Optional.of(studyBlock));
+        when(studyBlockRepository.findByIdAndUserId(1L, currentUser.getId())).thenReturn(Optional.of(studyBlock));
         when(problemRepository.findByIdInAndStudyBlockId(problemIds,1L)).thenReturn(problems);
 
         problemService.bulkDeleteProblems(1L, request);
 
-        verify(studyBlockRepository).findById(1L);
+        verify(studyBlockRepository).findByIdAndUserId(1L, currentUser.getId());
         verify(problemRepository).findByIdInAndStudyBlockId(problemIds, 1L);
         verify(problemRepository).deleteAllInBatch(problems);
     }
@@ -767,14 +804,14 @@ class ProblemServiceTest {
 
         request.setProblemIds(problemIds);
 
-        when(studyBlockRepository.findById(99L)).thenReturn(Optional.empty());
+        when(studyBlockRepository.findByIdAndUserId(99L, currentUser.getId())).thenReturn(Optional.empty());
 
         StudyBlockNotFoundException exception = assertThrows(StudyBlockNotFoundException.class,
                 () -> problemService.bulkDeleteProblems(99L, request));
 
         assertEquals("Study block with id 99 was not found", exception.getMessage());
 
-        verify(studyBlockRepository).findById(99L);
+        verify(studyBlockRepository).findByIdAndUserId(99L, currentUser.getId());
         verify(problemRepository, never()).findByIdInAndStudyBlockId(anySet(), eq(99L));
         verify(problemRepository, never()).deleteAllInBatch(anyList());
     }
@@ -784,7 +821,8 @@ class ProblemServiceTest {
         StudyBlock studyBlock = new StudyBlock(
                 1L,
                 "Title",
-                false
+                false,
+                currentUser
         );
 
         Problem problem2 = new Problem(
@@ -803,7 +841,7 @@ class ProblemServiceTest {
 
         request.setProblemIds(problemIds);
 
-        when(studyBlockRepository.findById(1L)).thenReturn(Optional.of(studyBlock));
+        when(studyBlockRepository.findByIdAndUserId(1L, currentUser.getId())).thenReturn(Optional.of(studyBlock));
         when(problemRepository.findByIdInAndStudyBlockId(problemIds, 1L)).thenReturn(List.of(problem2));
 
         ProblemNotFoundException exception = assertThrows(ProblemNotFoundException.class,
@@ -811,26 +849,26 @@ class ProblemServiceTest {
 
         assertEquals("One or more selected problems were not found in study block 1", exception.getMessage());
 
-        verify(studyBlockRepository).findById(1L);
+        verify(studyBlockRepository).findByIdAndUserId(1L, currentUser.getId());
         verify(problemRepository).findByIdInAndStudyBlockId(problemIds, 1L);
         verify(problemRepository, never()).deleteAllInBatch(anyList());
     }
 
     @Test
     void clearProblemsShouldDeleteAllProblemsWhenStudyBlockExists() {
-        StudyBlock studyBlock = new StudyBlock(1L, "Java", true);
+        StudyBlock studyBlock = new StudyBlock(1L, "Java", true, currentUser);
 
-        when(studyBlockRepository.findById(1L)).thenReturn(Optional.of(studyBlock));
+        when(studyBlockRepository.findByIdAndUserId(1L, currentUser.getId())).thenReturn(Optional.of(studyBlock));
 
         problemService.clearProblems(1L);
 
-        verify(studyBlockRepository).findById(1L);
+        verify(studyBlockRepository).findByIdAndUserId(1L, currentUser.getId());
         verify(problemRepository).deleteAllByStudyBlockId(1L);
     }
 
     @Test
     void clearProblemsShouldThrowStudyBlockNotFoundExceptionWhenStudyBlockDoesNotExist() {
-        when(studyBlockRepository.findById(99L)).thenReturn(Optional.empty());
+        when(studyBlockRepository.findByIdAndUserId(99L, currentUser.getId())).thenReturn(Optional.empty());
 
         StudyBlockNotFoundException exception = assertThrows(
                 StudyBlockNotFoundException.class,
@@ -838,7 +876,97 @@ class ProblemServiceTest {
 
         assertEquals("Study block with id 99 was not found", exception.getMessage());
 
-        verify(studyBlockRepository).findById(99L);
+        verify(studyBlockRepository).findByIdAndUserId(99L, currentUser.getId());
         verify(problemRepository, never()).deleteAllByStudyBlockId(anyLong());
+    }
+
+    @Test
+    void createProblemShouldRejectStudyBlockOwnedByAnotherUser() {
+        StudyBlock foreignBlock = givenStudyBlockOwnedByAnotherUser();
+        CreateProblemRequest request = new CreateProblemRequest();
+        request.setTitle("Unauthorized problem");
+
+        assertForeignStudyBlockIsRejected(foreignBlock, () ->
+                problemService.createProblem(foreignBlock.getId(), request));
+    }
+
+    @Test
+    void getProblemsShouldRejectStudyBlockOwnedByAnotherUser() {
+        StudyBlock foreignBlock = givenStudyBlockOwnedByAnotherUser();
+
+        assertForeignStudyBlockIsRejected(foreignBlock, () ->
+                problemService.getProblems(foreignBlock.getId(), null, null, PageRequest.of(0, 10)));
+    }
+
+    @Test
+    void getProblemByIdShouldRejectStudyBlockOwnedByAnotherUser() {
+        StudyBlock foreignBlock = givenStudyBlockOwnedByAnotherUser();
+
+        assertForeignStudyBlockIsRejected(foreignBlock, () ->
+                problemService.getProblemById(7L, foreignBlock.getId()));
+    }
+
+    @Test
+    void updateProblemShouldRejectStudyBlockOwnedByAnotherUser() {
+        StudyBlock foreignBlock = givenStudyBlockOwnedByAnotherUser();
+        UpdateProblemRequest request = new UpdateProblemRequest();
+        request.setTitle("Unauthorized update");
+
+        assertForeignStudyBlockIsRejected(foreignBlock, () ->
+                problemService.updateProblem(7L, foreignBlock.getId(), request));
+    }
+
+    @Test
+    void deleteProblemShouldRejectStudyBlockOwnedByAnotherUser() {
+        StudyBlock foreignBlock = givenStudyBlockOwnedByAnotherUser();
+
+        assertForeignStudyBlockIsRejected(foreignBlock, () ->
+                problemService.deleteProblem(7L, foreignBlock.getId()));
+    }
+
+    @Test
+    void bulkDeleteProblemsShouldRejectStudyBlockOwnedByAnotherUser() {
+        StudyBlock foreignBlock = givenStudyBlockOwnedByAnotherUser();
+        BulkDeleteProblemsRequest request = new BulkDeleteProblemsRequest();
+        request.setProblemIds(Set.of(7L, 8L));
+
+        assertForeignStudyBlockIsRejected(foreignBlock, () ->
+                problemService.bulkDeleteProblems(foreignBlock.getId(), request));
+    }
+
+    @Test
+    void clearProblemsShouldRejectStudyBlockOwnedByAnotherUser() {
+        StudyBlock foreignBlock = givenStudyBlockOwnedByAnotherUser();
+
+        assertForeignStudyBlockIsRejected(foreignBlock, () ->
+                problemService.clearProblems(foreignBlock.getId()));
+    }
+
+    private StudyBlock givenStudyBlockOwnedByAnotherUser() {
+        AppUser otherUser = new AppUser(202L, "bob@example.com", "other-password-hash");
+        StudyBlock foreignBlock = new StudyBlock(501L, "Private block", true, otherUser);
+
+        // Model the owner-scoped lookup: this block exists, but only for Bob.
+        when(studyBlockRepository.findByIdAndUserId(eq(foreignBlock.getId()), anyLong()))
+                .thenAnswer(invocation -> otherUser.getId().equals(invocation.getArgument(1))
+                        ? Optional.of(foreignBlock)
+                        : Optional.empty());
+
+        return foreignBlock;
+    }
+
+    private void assertForeignStudyBlockIsRejected(
+            StudyBlock foreignBlock,
+            org.junit.jupiter.api.function.Executable operation) {
+        StudyBlockNotFoundException exception =
+                assertThrows(StudyBlockNotFoundException.class, operation);
+
+        assertEquals("Study block with id 501 was not found", exception.getMessage());
+        verify(studyBlockRepository).findByIdAndUserId(foreignBlock.getId(), currentUser.getId());
+        verifyNoMoreInteractions(studyBlockRepository);
+        verifyNoInteractions(problemRepository);
+        assertEquals("Private block", foreignBlock.getTitle());
+        assertTrue(foreignBlock.isActive());
+        assertEquals(202L, foreignBlock.getUser().getId());
     }
 }

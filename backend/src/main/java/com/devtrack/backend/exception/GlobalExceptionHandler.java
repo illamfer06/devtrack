@@ -1,7 +1,6 @@
 package com.devtrack.backend.exception;
 
 import com.devtrack.backend.dto.ErrorResponse;
-import com.devtrack.backend.model.StudyBlock;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -63,6 +62,26 @@ public class GlobalExceptionHandler {
             HttpServletRequest request) {
 
         return createErrorResponse(HttpStatus.CONFLICT, exception.getMessage(), request);
+    }
+
+    @ExceptionHandler(EmailAlreadyExistsException.class)
+    public ResponseEntity<ErrorResponse> handleEmailAlreadyExistsException(
+            EmailAlreadyExistsException exception,
+            HttpServletRequest request) {
+
+        return createErrorResponse(HttpStatus.CONFLICT, exception.getMessage(), request);
+    }
+
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidCredentialsException(
+            InvalidCredentialsException exception,
+            HttpServletRequest request) {
+
+        return createErrorResponse(
+                HttpStatus.UNAUTHORIZED,
+                exception.getMessage(),
+                request
+        );
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)

@@ -1,15 +1,22 @@
 package com.devtrack.backend.controller;
 
 import com.devtrack.backend.dto.*;
+import com.devtrack.backend.config.SecurityConfig;
+import com.devtrack.backend.repository.AppUserRepository;
+import com.devtrack.backend.service.CustomUserDetailsService;
 import com.devtrack.backend.exception.ProblemNotFoundException;
 import com.devtrack.backend.exception.StudyBlockNotFoundException;
 import com.devtrack.backend.model.Difficulty;
 import com.devtrack.backend.service.ProblemService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Import;
+import com.devtrack.backend.security.WithDevTrackUser;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -21,6 +28,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.*;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -33,7 +41,20 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 
 @WebMvcTest(ProblemController.class)
+@Import(SecurityConfig.class)
+@WithDevTrackUser
 class ProblemControllerTest {
+
+    @MockitoBean
+    private AppUserRepository appUserRepository;
+
+    @MockitoBean
+    private CustomUserDetailsService userDetailsService;
+
+    @BeforeEach
+    void setUpActiveAccount() {
+        when(appUserRepository.existsById(101L)).thenReturn(true);
+    }
 
     @Autowired
     private MockMvc mockMvc;
@@ -72,7 +93,7 @@ class ProblemControllerTest {
 
         when(problemService.createProblem(eq(1L), any(CreateProblemRequest.class))).thenReturn(problemResponse);
 
-        mockMvc.perform(post("/study-blocks/{studyBlockId}/problems", 1L)
+        mockMvc.perform(post("/study-blocks/{studyBlockId}/problems", 1L).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -114,7 +135,7 @@ class ProblemControllerTest {
         invalidRequest.setNotes("Notes");
         invalidRequest.setUrl("Url");
 
-        mockMvc.perform(post("/study-blocks/{studyBlockId}/problems", 1L)
+        mockMvc.perform(post("/study-blocks/{studyBlockId}/problems", 1L).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(invalidRequest)))
@@ -141,7 +162,7 @@ class ProblemControllerTest {
                 }
                 """;
 
-        mockMvc.perform(post("/study-blocks/{studyBlockId}/problems", 1L)
+        mockMvc.perform(post("/study-blocks/{studyBlockId}/problems", 1L).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON)
                         .content(json))
@@ -169,7 +190,7 @@ class ProblemControllerTest {
         when(problemService.createProblem(eq(99L), any(CreateProblemRequest.class)))
                 .thenThrow(new StudyBlockNotFoundException("Study block with id 99 was not found"));
 
-        mockMvc.perform(post("/study-blocks/{studyBlockId}/problems", 99L)
+        mockMvc.perform(post("/study-blocks/{studyBlockId}/problems", 99L).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .accept(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
@@ -813,7 +834,7 @@ class ProblemControllerTest {
 
         when(problemService.updateProblem(eq(1L), eq(5L), any(UpdateProblemRequest.class))).thenReturn(problemResponse);
 
-        mockMvc.perform(put("/study-blocks/{studyBlockId}/problems/{problemId}",5L, 1L)
+        mockMvc.perform(put("/study-blocks/{studyBlockId}/problems/{problemId}",5L, 1L).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -854,7 +875,7 @@ class ProblemControllerTest {
         request.setNotes("Updated Notes");
         request.setUrl("Updated Url");
 
-        mockMvc.perform(put("/study-blocks/{studyBlockId}/problems/{problemId}",5L, 1L)
+        mockMvc.perform(put("/study-blocks/{studyBlockId}/problems/{problemId}",5L, 1L).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -881,7 +902,7 @@ class ProblemControllerTest {
                 }
                 """;
 
-        mockMvc.perform(put("/study-blocks/{studyBlockId}/problems/{problemId}", 5L,1L)
+        mockMvc.perform(put("/study-blocks/{studyBlockId}/problems/{problemId}", 5L,1L).with(csrf())
                     .contentType(MediaType.APPLICATION_JSON)
                     .accept(MediaType.APPLICATION_JSON)
                     .content(json))
@@ -910,7 +931,7 @@ class ProblemControllerTest {
         when(problemService.updateProblem(eq(1L), eq(99L), any(UpdateProblemRequest.class)))
                 .thenThrow(new StudyBlockNotFoundException("Study block with id 99 was not found"));
 
-        mockMvc.perform(put("/study-blocks/{studyBlockId}/problems/{problemId}", 99L, 1L)
+        mockMvc.perform(put("/study-blocks/{studyBlockId}/problems/{problemId}", 99L, 1L).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -939,7 +960,7 @@ class ProblemControllerTest {
         when(problemService.updateProblem(eq(99L), eq(1L), any(UpdateProblemRequest.class)))
                 .thenThrow(new ProblemNotFoundException("Problem with id 99 was not found in study block 1"));
 
-        mockMvc.perform(put("/study-blocks/{studyBlockId}/problems/{problemId}", 1L, 99L)
+        mockMvc.perform(put("/study-blocks/{studyBlockId}/problems/{problemId}", 1L, 99L).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -956,7 +977,7 @@ class ProblemControllerTest {
     @Test
     void deleteProblemShouldReturn204WhenProblemExists() throws Exception {
 
-        mockMvc.perform(delete("/study-blocks/{studyBlockId}/problems/{problemId}", 5L, 1L))
+        mockMvc.perform(delete("/study-blocks/{studyBlockId}/problems/{problemId}", 5L, 1L).with(csrf()))
                 .andExpect(status().isNoContent())
                 .andExpect(content().string(""));
 
@@ -969,7 +990,7 @@ class ProblemControllerTest {
         doThrow(new StudyBlockNotFoundException("Study block with id 99 was not found"))
                 .when(problemService).deleteProblem(1L, 99L);
 
-        mockMvc.perform(delete("/study-blocks/{studyBlockId}/problems/{problemId}", 99L, 1L))
+        mockMvc.perform(delete("/study-blocks/{studyBlockId}/problems/{problemId}", 99L, 1L).with(csrf()))
                 .andExpect(status().isNotFound())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.status").value(404))
@@ -986,7 +1007,7 @@ class ProblemControllerTest {
         doThrow(new ProblemNotFoundException("Problem with id 99 was not found in study block 1"))
                 .when(problemService).deleteProblem(99L, 1L);
 
-        mockMvc.perform(delete("/study-blocks/{studyBlockId}/problems/{problemId}", 1L, 99L))
+        mockMvc.perform(delete("/study-blocks/{studyBlockId}/problems/{problemId}", 1L, 99L).with(csrf()))
                 .andExpect(status().isNotFound())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.status").value(404))
@@ -1005,7 +1026,7 @@ class ProblemControllerTest {
 
         request.setProblemIds(problemIds);
 
-        mockMvc.perform(post("/study-blocks/{studyBlockId}/problems/bulk-delete", 1L)
+        mockMvc.perform(post("/study-blocks/{studyBlockId}/problems/bulk-delete", 1L).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isNoContent())
@@ -1030,7 +1051,7 @@ class ProblemControllerTest {
         doThrow(new StudyBlockNotFoundException("Study block with id 99 was not found"))
                 .when(problemService).bulkDeleteProblems(eq(99L), any(BulkDeleteProblemsRequest.class));
 
-        mockMvc.perform(post("/study-blocks/{studyBlockId}/problems/bulk-delete", 99L)
+        mockMvc.perform(post("/study-blocks/{studyBlockId}/problems/bulk-delete", 99L).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isNotFound())
@@ -1058,7 +1079,7 @@ class ProblemControllerTest {
         doThrow(new ProblemNotFoundException("One or more selected problems were not found in study block 1"))
                 .when(problemService).bulkDeleteProblems(eq(1L), any(BulkDeleteProblemsRequest.class));
 
-        mockMvc.perform(post("/study-blocks/{studyBlockId}/problems/bulk-delete", 1L)
+        mockMvc.perform(post("/study-blocks/{studyBlockId}/problems/bulk-delete", 1L).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isNotFound())
@@ -1081,7 +1102,7 @@ class ProblemControllerTest {
         BulkDeleteProblemsRequest request = new BulkDeleteProblemsRequest();
         request.setProblemIds(Set.of());
 
-        mockMvc.perform(post("/study-blocks/{studyBlockId}/problems/bulk-delete", 1L)
+        mockMvc.perform(post("/study-blocks/{studyBlockId}/problems/bulk-delete", 1L).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
@@ -1100,7 +1121,7 @@ class ProblemControllerTest {
         BulkDeleteProblemsRequest request = new BulkDeleteProblemsRequest();
         request.setProblemIds(null);
 
-        mockMvc.perform(post("/study-blocks/{studyBlockId}/problems/bulk-delete", 1L)
+        mockMvc.perform(post("/study-blocks/{studyBlockId}/problems/bulk-delete", 1L).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
@@ -1123,7 +1144,7 @@ class ProblemControllerTest {
             }
             """;
 
-        mockMvc.perform(post("/study-blocks/{studyBlockId}/problems/bulk-delete", 1L)
+        mockMvc.perform(post("/study-blocks/{studyBlockId}/problems/bulk-delete", 1L).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
@@ -1139,7 +1160,7 @@ class ProblemControllerTest {
 
     @Test
     void clearProblemsShouldReturn204WhenStudyBlockExists() throws Exception {
-        mockMvc.perform(delete("/study-blocks/{studyBlockId}/problems/clear", 1L))
+        mockMvc.perform(delete("/study-blocks/{studyBlockId}/problems/clear", 1L).with(csrf()))
                 .andExpect(status().isNoContent())
                 .andExpect(content().string(""));
 
@@ -1151,7 +1172,7 @@ class ProblemControllerTest {
         doThrow(new StudyBlockNotFoundException("Study block with id 99 was not found"))
                 .when(problemService).clearProblems(99L);
 
-        mockMvc.perform(delete("/study-blocks/{studyBlockId}/problems/clear", 99L))
+        mockMvc.perform(delete("/study-blocks/{studyBlockId}/problems/clear", 99L).with(csrf()))
                 .andExpect(status().isNotFound())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.status").value(404))
@@ -1162,5 +1183,127 @@ class ProblemControllerTest {
                         .value("/study-blocks/99/problems/clear"));
 
         verify(problemService).clearProblems(99L);
+    }
+
+    @Test
+    void getProblemsShouldReturn401WhenAnonymous() throws Exception {
+        assertSecurityError(
+                get("/study-blocks/1/problems").with(anonymous()),
+                401, "Unauthorized", "Authentication required", "/study-blocks/1/problems");
+    }
+
+    @Test
+    void getProblemByIdShouldReturn401WhenAnonymous() throws Exception {
+        assertSecurityError(
+                get("/study-blocks/1/problems/7").with(anonymous()),
+                401, "Unauthorized", "Authentication required", "/study-blocks/1/problems/7");
+    }
+
+    @Test
+    void createProblemShouldReturn401WhenAnonymous() throws Exception {
+        assertSecurityError(
+                post("/study-blocks/1/problems")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Title\",\"difficulty\":\"EASY\",\"solved\":false}").with(anonymous()).with(csrf()),
+                401, "Unauthorized", "Authentication required", "/study-blocks/1/problems");
+    }
+
+    @Test
+    void createProblemShouldReturn403WhenCsrfIsMissing() throws Exception {
+        assertSecurityError(
+                post("/study-blocks/1/problems")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Title\",\"difficulty\":\"EASY\",\"solved\":false}"),
+                403, "Forbidden", "Access denied", "/study-blocks/1/problems");
+    }
+
+    @Test
+    void createProblemShouldReturn403WhenCsrfIsInvalid() throws Exception {
+        assertSecurityError(
+                post("/study-blocks/1/problems")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Title\",\"difficulty\":\"EASY\",\"solved\":false}").with(csrf().useInvalidToken()),
+                403, "Forbidden", "Access denied", "/study-blocks/1/problems");
+    }
+
+    @Test
+    void updateProblemShouldReturn401WhenAnonymous() throws Exception {
+        assertSecurityError(
+                put("/study-blocks/1/problems/7")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Updated Title\",\"difficulty\":\"MEDIUM\",\"solved\":true}").with(anonymous()).with(csrf()),
+                401, "Unauthorized", "Authentication required", "/study-blocks/1/problems/7");
+    }
+
+    @Test
+    void updateProblemShouldReturn403WhenCsrfIsMissing() throws Exception {
+        assertSecurityError(
+                put("/study-blocks/1/problems/7")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Updated Title\",\"difficulty\":\"MEDIUM\",\"solved\":true}"),
+                403, "Forbidden", "Access denied", "/study-blocks/1/problems/7");
+    }
+
+    @Test
+    void deleteProblemShouldReturn401WhenAnonymous() throws Exception {
+        assertSecurityError(
+                delete("/study-blocks/1/problems/7").with(anonymous()).with(csrf()),
+                401, "Unauthorized", "Authentication required", "/study-blocks/1/problems/7");
+    }
+
+    @Test
+    void deleteProblemShouldReturn403WhenCsrfIsMissing() throws Exception {
+        assertSecurityError(
+                delete("/study-blocks/1/problems/7"),
+                403, "Forbidden", "Access denied", "/study-blocks/1/problems/7");
+    }
+
+    @Test
+    void bulkDeleteProblemsShouldReturn401WhenAnonymous() throws Exception {
+        assertSecurityError(
+                post("/study-blocks/1/problems/bulk-delete")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"problemIds\":[7,8]}").with(anonymous()).with(csrf()),
+                401, "Unauthorized", "Authentication required", "/study-blocks/1/problems/bulk-delete");
+    }
+
+    @Test
+    void bulkDeleteProblemsShouldReturn403WhenCsrfIsMissing() throws Exception {
+        assertSecurityError(
+                post("/study-blocks/1/problems/bulk-delete")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"problemIds\":[7,8]}"),
+                403, "Forbidden", "Access denied", "/study-blocks/1/problems/bulk-delete");
+    }
+
+    @Test
+    void clearProblemsShouldReturn401WhenAnonymous() throws Exception {
+        assertSecurityError(
+                delete("/study-blocks/1/problems/clear").with(anonymous()).with(csrf()),
+                401, "Unauthorized", "Authentication required", "/study-blocks/1/problems/clear");
+    }
+
+    @Test
+    void clearProblemsShouldReturn403WhenCsrfIsMissing() throws Exception {
+        assertSecurityError(
+                delete("/study-blocks/1/problems/clear"),
+                403, "Forbidden", "Access denied", "/study-blocks/1/problems/clear");
+    }
+
+    private void assertSecurityError(
+            MockHttpServletRequestBuilder request,
+            int expectedStatus,
+            String expectedError,
+            String expectedMessage,
+            String expectedPath) throws Exception {
+        mockMvc.perform(request)
+                .andExpect(status().is(expectedStatus))
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(expectedStatus))
+                .andExpect(jsonPath("$.error").value(expectedError))
+                .andExpect(jsonPath("$.message").value(expectedMessage))
+                .andExpect(jsonPath("$.path").value(expectedPath));
+
+        verifyNoInteractions(problemService, userDetailsService);
     }
 }

@@ -26,4 +26,11 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
     @Modifying
     @Query("DELETE FROM  Problem p WHERE p.studyBlock.id = :studyBlockId")
     void deleteAllByStudyBlockId(@Param("studyBlockId") Long studyBlockId);
+    @Modifying
+    @Query("""
+        DELETE FROM Problem p WHERE  p.studyBlock.id IN (
+                SELECT sb.id FROM StudyBlock sb WHERE sb.user.id = :userId
+                )
+        """)
+    int deleteAllByUserId(@Param("userId") Long userId);
 }

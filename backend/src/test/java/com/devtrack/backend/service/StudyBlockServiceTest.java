@@ -4,9 +4,14 @@ import com.devtrack.backend.dto.*;
 import com.devtrack.backend.exception.StudyBlockNotEmptyException;
 import com.devtrack.backend.exception.StudyBlockNotFoundException;
 import com.devtrack.backend.model.StudyBlock;
+import com.devtrack.backend.model.AppUser;
 import com.devtrack.backend.repository.ProblemRepository;
 import com.devtrack.backend.repository.StudyBlockRepository;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
@@ -35,6 +40,25 @@ class StudyBlockServiceTest {
     @Mock
     private ProblemRepository problemRepository;
 
+    @Mock
+    private AuthService authService;
+
+    private final AppUser currentUser = new AppUser(101L, "alice@example.com", "password-hash");
+
+    @BeforeEach
+    void setUp() {
+        var context = SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(UsernamePasswordAuthenticationToken.authenticated(
+                currentUser.getEmail(), null, java.util.List.of()));
+        SecurityContextHolder.setContext(context);
+        when(authService.getUserByEmail(currentUser.getEmail())).thenReturn(currentUser);
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
+    }
+
     @InjectMocks
     private StudyBlockService studyBlockService;
 
@@ -49,7 +73,8 @@ class StudyBlockServiceTest {
         StudyBlock savedStudyBlock = new StudyBlock(
                 1L,
                 "Title",
-                false
+                false,
+                currentUser
         );
 
         when(studyBlockRepository.save(any(StudyBlock.class))).thenReturn(savedStudyBlock);
@@ -69,6 +94,7 @@ class StudyBlockServiceTest {
         assertNull(studyBlockToSave.getId());
         assertEquals("Title", studyBlockToSave.getTitle());
         assertFalse(studyBlockToSave.isActive());
+        assertSame(currentUser, studyBlockToSave.getUser());
     }
 
     @Test
@@ -77,10 +103,11 @@ class StudyBlockServiceTest {
         StudyBlock studyBlock = new StudyBlock(
                 1L,
                 "Title",
-                true
+                true,
+                currentUser
         );
 
-        when(studyBlockRepository.findById(1L)).thenReturn(Optional.of(studyBlock));
+        when(studyBlockRepository.findByIdAndUserId(1L, currentUser.getId())).thenReturn(Optional.of(studyBlock));
 
         StudyBlockResponse response = studyBlockService.getStudyBlockById(1L);
 
@@ -88,12 +115,12 @@ class StudyBlockServiceTest {
         assertEquals("Title", response.getTitle());
         assertTrue(response.isActive());
 
-        verify(studyBlockRepository).findById(1L);
+        verify(studyBlockRepository).findByIdAndUserId(1L, currentUser.getId());
     }
 
     @Test
     void getStudyBlockByIdShouldThrowExceptionWhenStudyBlockDoesNotExist() {
-        when(studyBlockRepository.findById(99L)).thenReturn(Optional.empty());
+        when(studyBlockRepository.findByIdAndUserId(99L, currentUser.getId())).thenReturn(Optional.empty());
 
         StudyBlockNotFoundException exception = assertThrows(
                 StudyBlockNotFoundException.class,
@@ -102,7 +129,7 @@ class StudyBlockServiceTest {
 
         assertEquals("Study block with id 99 was not found", exception.getMessage());
 
-        verify(studyBlockRepository).findById(99L);
+        verify(studyBlockRepository).findByIdAndUserId(99L, currentUser.getId());
     }
 
     @Test
@@ -110,20 +137,22 @@ class StudyBlockServiceTest {
         StudyBlock studyBlock1 = new StudyBlock(
                 1L,
                 "Title 1",
-                true
+                true,
+                currentUser
         );
 
         StudyBlock studyBlock2 = new StudyBlock(
                 2L,
                 "Title 2",
-                false
+                false,
+                currentUser
         );
 
         Pageable pageable = PageRequest.of(0, 2);
 
         Page<StudyBlock> page = new PageImpl<>(List.of(studyBlock1, studyBlock2), pageable, 5);
 
-        when(studyBlockRepository.findAll(pageable)).thenReturn(page);
+        when(studyBlockRepository.findByUserId(currentUser.getId(), pageable)).thenReturn(page);
 
         PageResponse<StudyBlockResponse> response = studyBlockService.getStudyBlocks(null, pageable);
 
@@ -146,8 +175,8 @@ class StudyBlockServiceTest {
         assertEquals(5, response.getTotalElements());
         assertEquals(3, response.getTotalPages());
 
-        verify(studyBlockRepository).findAll(pageable);
-        verify(studyBlockRepository, never()).findByActive(anyBoolean(), eq(pageable));
+        verify(studyBlockRepository).findByUserId(currentUser.getId(), pageable);
+        verify(studyBlockRepository, never()).findByUserIdAndActive(eq(currentUser.getId()), anyBoolean(), eq(pageable));
     }
 
     @Test
@@ -156,7 +185,7 @@ class StudyBlockServiceTest {
 
         Page<StudyBlock> page = new PageImpl<>(Collections.emptyList(), pageable, 0);
 
-        when(studyBlockRepository.findAll(pageable)).thenReturn(page);
+        when(studyBlockRepository.findByUserId(currentUser.getId(), pageable)).thenReturn(page);
 
         PageResponse<StudyBlockResponse> response = studyBlockService.getStudyBlocks(null, pageable);
 
@@ -166,8 +195,8 @@ class StudyBlockServiceTest {
         assertEquals(0, response.getTotalElements());
         assertEquals(0, response.getTotalPages());
 
-        verify(studyBlockRepository).findAll(pageable);
-        verify(studyBlockRepository, never()).findByActive(anyBoolean(), eq(pageable));
+        verify(studyBlockRepository).findByUserId(currentUser.getId(), pageable);
+        verify(studyBlockRepository, never()).findByUserIdAndActive(eq(currentUser.getId()), anyBoolean(), eq(pageable));
 
     }
 
@@ -176,20 +205,22 @@ class StudyBlockServiceTest {
         StudyBlock studyBlock1 = new StudyBlock(
                 1L,
                 "Title 1",
-                true
+                true,
+                currentUser
         );
 
         StudyBlock studyBlock2 = new StudyBlock(
                 2L,
                 "Title 2",
-                true
+                true,
+                currentUser
         );
 
         Pageable pageable = PageRequest.of(0, 2);
 
         Page<StudyBlock> page = new PageImpl<>(List.of(studyBlock1, studyBlock2), pageable, 5);
 
-        when(studyBlockRepository.findByActive(true, pageable)).thenReturn(page);
+        when(studyBlockRepository.findByUserIdAndActive(currentUser.getId(), true, pageable)).thenReturn(page);
 
         PageResponse<StudyBlockResponse> response = studyBlockService.getStudyBlocks(true, pageable);
 
@@ -212,8 +243,8 @@ class StudyBlockServiceTest {
         assertEquals(5, response.getTotalElements());
         assertEquals(3, response.getTotalPages());
 
-        verify(studyBlockRepository).findByActive(true, pageable);
-        verify(studyBlockRepository, never()).findAll(pageable);
+        verify(studyBlockRepository).findByUserIdAndActive(currentUser.getId(), true, pageable);
+        verify(studyBlockRepository, never()).findByUserId(currentUser.getId(), pageable);
     }
 
     @Test
@@ -221,7 +252,8 @@ class StudyBlockServiceTest {
         StudyBlock studyBlock = new StudyBlock(
                 1L,
                 "Title",
-                true
+                true,
+                currentUser
         );
 
         UpdateStudyBlockRequest request = new UpdateStudyBlockRequest();
@@ -232,10 +264,11 @@ class StudyBlockServiceTest {
         StudyBlock updatedStudyBlock = new StudyBlock(
                 1L,
                 "Updated Title",
-                false
+                false,
+                currentUser
         );
 
-        when(studyBlockRepository.findById(1L)).thenReturn(Optional.of(studyBlock));
+        when(studyBlockRepository.findByIdAndUserId(1L, currentUser.getId())).thenReturn(Optional.of(studyBlock));
         when(studyBlockRepository.save(any(StudyBlock.class))).thenReturn(updatedStudyBlock);
 
         StudyBlockResponse studyBlockResponse = studyBlockService.updateStudyBlock(1L, request);
@@ -246,7 +279,7 @@ class StudyBlockServiceTest {
 
         ArgumentCaptor<StudyBlock> studyBlockCaptor = ArgumentCaptor.forClass(StudyBlock.class);
 
-        verify(studyBlockRepository).findById(1L);
+        verify(studyBlockRepository).findByIdAndUserId(1L, currentUser.getId());
         verify(studyBlockRepository).save(studyBlockCaptor.capture());
 
         StudyBlock studyBlockToSave = studyBlockCaptor.getValue();
@@ -254,6 +287,7 @@ class StudyBlockServiceTest {
         assertEquals(1L, studyBlockToSave.getId());
         assertEquals("Updated Title", studyBlockToSave.getTitle());
         assertFalse(studyBlockToSave.isActive());
+        assertSame(currentUser, studyBlockToSave.getUser());
     }
 
     @Test
@@ -263,14 +297,14 @@ class StudyBlockServiceTest {
         request.setTitle("Updated Title");
         request.setActive(false);
 
-        when(studyBlockRepository.findById(99L)).thenReturn(Optional.empty());
+        when(studyBlockRepository.findByIdAndUserId(99L, currentUser.getId())).thenReturn(Optional.empty());
 
         StudyBlockNotFoundException exception = assertThrows(StudyBlockNotFoundException.class,
                 () -> studyBlockService.updateStudyBlock(99L, request));
 
         assertEquals("Study block with id 99 was not found", exception.getMessage());
 
-        verify(studyBlockRepository).findById(99L);
+        verify(studyBlockRepository).findByIdAndUserId(99L, currentUser.getId());
         verify(studyBlockRepository, never()).save(any(StudyBlock.class));
     }
 
@@ -279,15 +313,16 @@ class StudyBlockServiceTest {
         StudyBlock studyBlock = new StudyBlock(
                 1L,
                 "Title",
-                true
+                true,
+                currentUser
         );
 
-        when(studyBlockRepository.findById(1L)).thenReturn(Optional.of(studyBlock));
+        when(studyBlockRepository.findByIdAndUserId(1L, currentUser.getId())).thenReturn(Optional.of(studyBlock));
         when(problemRepository.existsByStudyBlockId(1L)).thenReturn(false);
 
         studyBlockService.deleteStudyBlock(1L);
 
-        verify(studyBlockRepository).findById(1L);
+        verify(studyBlockRepository).findByIdAndUserId(1L, currentUser.getId());
         verify(problemRepository).existsByStudyBlockId(1L);
         verify(studyBlockRepository).delete(studyBlock);
     }
@@ -297,10 +332,11 @@ class StudyBlockServiceTest {
         StudyBlock studyBlock = new StudyBlock(
                 1L,
                 "Title",
-                true
+                true,
+                currentUser
         );
 
-        when(studyBlockRepository.findById(99L)).thenReturn(Optional.of(studyBlock));
+        when(studyBlockRepository.findByIdAndUserId(99L, currentUser.getId())).thenReturn(Optional.of(studyBlock));
         when(problemRepository.existsByStudyBlockId(99L)).thenReturn(true);
 
         StudyBlockNotEmptyException exception = assertThrows(StudyBlockNotEmptyException.class,
@@ -308,7 +344,7 @@ class StudyBlockServiceTest {
 
         assertEquals("Study block must be empty to delete", exception.getMessage());
 
-        verify(studyBlockRepository).findById(99L);
+        verify(studyBlockRepository).findByIdAndUserId(99L, currentUser.getId());
         verify(problemRepository).existsByStudyBlockId(99L);
         verify(studyBlockRepository, never()).delete(studyBlock);
     }
@@ -316,15 +352,70 @@ class StudyBlockServiceTest {
 
     @Test
     void deleteStudyBlockShouldThrowStudyBlockNotFoundExceptionWhenStudyBlockDoesNotExist() {
-        when(studyBlockRepository.findById(99L)).thenReturn(Optional.empty());
+        when(studyBlockRepository.findByIdAndUserId(99L, currentUser.getId())).thenReturn(Optional.empty());
 
         StudyBlockNotFoundException exception = assertThrows(StudyBlockNotFoundException.class,
                 () -> studyBlockService.deleteStudyBlock(99L));
 
         assertEquals("Study block with id 99 was not found", exception.getMessage());
 
-        verify(studyBlockRepository).findById(99L);
+        verify(studyBlockRepository).findByIdAndUserId(99L, currentUser.getId());
         verify(problemRepository, never()).existsByStudyBlockId(anyLong());
         verify(studyBlockRepository, never()).delete(any(StudyBlock.class));
+    }
+
+    @Test
+    void getStudyBlockByIdShouldRejectStudyBlockOwnedByAnotherUser() {
+        StudyBlock foreignBlock = givenStudyBlockOwnedByAnotherUser();
+
+        assertForeignStudyBlockIsRejected(foreignBlock, () ->
+                studyBlockService.getStudyBlockById(foreignBlock.getId()));
+    }
+
+    @Test
+    void updateStudyBlockShouldRejectStudyBlockOwnedByAnotherUser() {
+        StudyBlock foreignBlock = givenStudyBlockOwnedByAnotherUser();
+        UpdateStudyBlockRequest request = new UpdateStudyBlockRequest();
+        request.setTitle("Unauthorized update");
+        request.setActive(true);
+
+        assertForeignStudyBlockIsRejected(foreignBlock, () ->
+                studyBlockService.updateStudyBlock(foreignBlock.getId(), request));
+    }
+
+    @Test
+    void deleteStudyBlockShouldRejectStudyBlockOwnedByAnotherUser() {
+        StudyBlock foreignBlock = givenStudyBlockOwnedByAnotherUser();
+
+        assertForeignStudyBlockIsRejected(foreignBlock, () ->
+                studyBlockService.deleteStudyBlock(foreignBlock.getId()));
+    }
+
+    private StudyBlock givenStudyBlockOwnedByAnotherUser() {
+        AppUser otherUser = new AppUser(202L, "bob@example.com", "other-password-hash");
+        StudyBlock foreignBlock = new StudyBlock(501L, "Private block", true, otherUser);
+
+        // Model the owner-scoped lookup: this block exists, but only for Bob.
+        when(studyBlockRepository.findByIdAndUserId(eq(foreignBlock.getId()), anyLong()))
+                .thenAnswer(invocation -> otherUser.getId().equals(invocation.getArgument(1))
+                        ? Optional.of(foreignBlock)
+                        : Optional.empty());
+
+        return foreignBlock;
+    }
+
+    private void assertForeignStudyBlockIsRejected(
+            StudyBlock foreignBlock,
+            org.junit.jupiter.api.function.Executable operation) {
+        StudyBlockNotFoundException exception =
+                assertThrows(StudyBlockNotFoundException.class, operation);
+
+        assertEquals("Study block with id 501 was not found", exception.getMessage());
+        verify(studyBlockRepository).findByIdAndUserId(foreignBlock.getId(), currentUser.getId());
+        verifyNoMoreInteractions(studyBlockRepository);
+        verifyNoInteractions(problemRepository);
+        assertEquals("Private block", foreignBlock.getTitle());
+        assertTrue(foreignBlock.isActive());
+        assertEquals(202L, foreignBlock.getUser().getId());
     }
 }

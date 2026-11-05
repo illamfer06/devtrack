@@ -10,6 +10,8 @@ import com.devtrack.backend.repository.ProblemRepository;
 import com.devtrack.backend.repository.StudyBlockRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,18 +24,20 @@ public class ProblemService {
 
     private final ProblemRepository problemRepository;
     private final StudyBlockRepository studyBlockRepository;
+    private final AuthService authService;
 
     public ProblemService(
             ProblemRepository problemRepository,
-            StudyBlockRepository studyBlockRepository) {
+            StudyBlockRepository studyBlockRepository,
+            AuthService authService) {
 
         this.problemRepository = problemRepository;
         this.studyBlockRepository = studyBlockRepository;
+        this.authService = authService;
     }
 
     public ProblemResponse createProblem(Long studyBlockId, CreateProblemRequest request) {
-        StudyBlock studyBlock = studyBlockRepository.findById(studyBlockId)
-                .orElseThrow(() -> new StudyBlockNotFoundException("Study block with id " + studyBlockId + " was not found"));
+        StudyBlock studyBlock = findStudyBlockByIdAndUserId(studyBlockId);
 
         Problem problem = new Problem(
                 request.getTitle(),
@@ -51,8 +55,7 @@ public class ProblemService {
     }
 
     public PageResponse<ProblemResponse> getProblems(Long studyBlockId, Difficulty difficulty, Boolean solved, Pageable pageable) {
-        studyBlockRepository.findById(studyBlockId)
-                .orElseThrow(() -> new StudyBlockNotFoundException("Study block with id " + studyBlockId + " was not found"));
+        findStudyBlockByIdAndUserId(studyBlockId);
 
         Page<Problem> problems;
 
@@ -113,7 +116,7 @@ public class ProblemService {
             Long studyBlockId,
             BulkDeleteProblemsRequest request) {
 
-        findStudyBlockById(studyBlockId);
+        findStudyBlockByIdAndUserId(studyBlockId);
 
         Set<Long> problemIds = request.getProblemIds();
 
@@ -129,18 +132,18 @@ public class ProblemService {
 
     @Transactional
     public void clearProblems(Long studyBlockId) {
-        findStudyBlockById(studyBlockId);
+        findStudyBlockByIdAndUserId(studyBlockId);
 
         problemRepository.deleteAllByStudyBlockId(studyBlockId);
     }
 
-    private StudyBlock findStudyBlockById(Long studyBlockId) {
-        return studyBlockRepository.findById(studyBlockId)
+    private StudyBlock findStudyBlockByIdAndUserId(Long studyBlockId) {
+        return studyBlockRepository.findByIdAndUserId(studyBlockId, getCurrentUserId())
                 .orElseThrow(() -> new StudyBlockNotFoundException("Study block with id " + studyBlockId + " was not found"));
     }
 
     private Problem findProblemByIdAndStudyBlockId(Long problemId, Long studyBlockId) {
-       findStudyBlockById(studyBlockId);
+       findStudyBlockByIdAndUserId(studyBlockId);
 
         return problemRepository.findByIdAndStudyBlockId(problemId, studyBlockId)
                 .orElseThrow(() -> new ProblemNotFoundException("Problem with id " + problemId + " was not found in study block " + studyBlockId));
@@ -158,5 +161,12 @@ public class ProblemService {
                 problem.getCreatedAt(),
                 problem.getUpdatedAt()
         );
+    }
+
+    private Long getCurrentUserId() {
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        return authService.getUserByEmail(authentication.getName()).getId();
     }
 }

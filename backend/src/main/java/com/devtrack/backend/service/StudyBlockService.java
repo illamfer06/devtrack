@@ -6,11 +6,14 @@ import com.devtrack.backend.dto.StudyBlockResponse;
 import com.devtrack.backend.dto.UpdateStudyBlockRequest;
 import com.devtrack.backend.exception.StudyBlockNotEmptyException;
 import com.devtrack.backend.exception.StudyBlockNotFoundException;
+import com.devtrack.backend.model.AppUser;
 import com.devtrack.backend.model.StudyBlock;
 import com.devtrack.backend.repository.ProblemRepository;
 import com.devtrack.backend.repository.StudyBlockRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -21,18 +24,23 @@ public class StudyBlockService {
 
     private final StudyBlockRepository studyBlockRepository;
     private final ProblemRepository problemRepository;
+    private final AuthService authService;
 
     public StudyBlockService(
             StudyBlockRepository studyBlockRepository,
-            ProblemRepository problemRepository) {
+            ProblemRepository problemRepository,
+            AuthService authService) {
         this.studyBlockRepository = studyBlockRepository;
         this.problemRepository = problemRepository;
+        this.authService = authService;
     }
 
     public StudyBlockResponse createStudyBlock(CreateStudyBlockRequest request) {
+
         StudyBlock studyBlock = new StudyBlock(
                 request.getTitle(),
-                request.isActive()
+                request.isActive(),
+                getCurrentUser()
         );
 
         StudyBlock savedStudyBlock = studyBlockRepository.save(studyBlock);
@@ -49,10 +57,12 @@ public class StudyBlockService {
     public PageResponse<StudyBlockResponse> getStudyBlocks(Boolean active, Pageable pageable) {
         Page<StudyBlock> studyBlocks;
 
+        Long userId = getCurrentUser().getId();
+
         if (active == null) {
-            studyBlocks = studyBlockRepository.findAll(pageable);
+            studyBlocks = studyBlockRepository.findByUserId(userId, pageable);
         } else {
-            studyBlocks = studyBlockRepository.findByActive(active, pageable);
+            studyBlocks = studyBlockRepository.findByUserIdAndActive(userId, active, pageable);
         }
 
         List<StudyBlockResponse> studyBlockResponses = new ArrayList<>();
@@ -90,8 +100,8 @@ public class StudyBlockService {
         studyBlockRepository.delete(studyBlock);
     }
 
-    private StudyBlock findStudyBlockById(Long id) {
-        return studyBlockRepository.findById(id).orElseThrow(() -> new StudyBlockNotFoundException("Study block with id " + id + " was not found"));
+    private StudyBlock findStudyBlockById(Long studyBlockId) {
+        return studyBlockRepository.findByIdAndUserId(studyBlockId, getCurrentUser().getId()).orElseThrow(() -> new StudyBlockNotFoundException("Study block with id " + studyBlockId + " was not found"));
     }
 
     private StudyBlockResponse toStudyBlockResponse(StudyBlock studyBlock) {
@@ -102,5 +112,12 @@ public class StudyBlockService {
                 studyBlock.getCreatedAt(),
                 studyBlock.getUpdatedAt()
         );
+    }
+
+    private AppUser getCurrentUser() {
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        return authService.getUserByEmail(authentication.getName());
     }
 }

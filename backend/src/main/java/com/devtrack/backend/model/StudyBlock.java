@@ -20,25 +20,32 @@ public class StudyBlock {
     private LocalDateTime createdAt;
     @UpdateTimestamp
     private LocalDateTime updatedAt;
+    @ManyToOne
+    @JoinColumn(name = "user_id", nullable = false)
+    private AppUser user;
 
     public StudyBlock(){}
 
     public StudyBlock(
             String title,
-            boolean active
+            boolean active,
+            AppUser user
     ) {
         this.title = title;
         this.active = active;
+        this.user = user;
     }
 
     public StudyBlock(
             Long id,
             String title,
-            boolean active
+            boolean active,
+            AppUser user
     ) {
         this.id = id;
         this.title = title;
         this.active = active;
+        this.user = user;
     }
 
     public Long getId() { return id;}
@@ -46,8 +53,8 @@ public class StudyBlock {
     public boolean isActive() { return active;}
     public LocalDateTime getCreatedAt() { return createdAt;}
     public LocalDateTime getUpdatedAt() { return updatedAt;}
+    public AppUser getUser() { return user;}
 
     public void setTitle(String title) { this.title = title;}
     public void setActive(boolean active) { this.active = active;}
-
 }

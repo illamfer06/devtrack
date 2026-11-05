@@ -1,14 +1,21 @@
 package com.devtrack.backend.controller;
 
 import com.devtrack.backend.dto.*;
+import com.devtrack.backend.config.SecurityConfig;
+import com.devtrack.backend.repository.AppUserRepository;
+import com.devtrack.backend.service.CustomUserDetailsService;
 import com.devtrack.backend.exception.StudyBlockNotEmptyException;
 import com.devtrack.backend.exception.StudyBlockNotFoundException;
 import com.devtrack.backend.service.StudyBlockService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Import;
+import com.devtrack.backend.security.WithDevTrackUser;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.MediaType;
@@ -19,6 +26,7 @@ import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.*;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -27,7 +35,20 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(StudyBlockController.class)
+@Import(SecurityConfig.class)
+@WithDevTrackUser
 class StudyBlockControllerTest {
+
+    @MockitoBean
+    private AppUserRepository appUserRepository;
+
+    @MockitoBean
+    private CustomUserDetailsService userDetailsService;
+
+    @BeforeEach
+    void setUpActiveAccount() {
+        when(appUserRepository.existsById(101L)).thenReturn(true);
+    }
 
     @Autowired
     private MockMvc mockMvc;
@@ -58,7 +79,7 @@ class StudyBlockControllerTest {
 
         when(studyBlockService.createStudyBlock(any(CreateStudyBlockRequest.class))).thenReturn(response);
 
-        mockMvc.perform(post("/study-blocks")
+        mockMvc.perform(post("/study-blocks").with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -87,7 +108,7 @@ class StudyBlockControllerTest {
         invalidRequest.setTitle("");
         invalidRequest.setActive(false);
 
-        mockMvc.perform(post("/study-blocks")
+        mockMvc.perform(post("/study-blocks").with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(invalidRequest)))
@@ -325,7 +346,7 @@ class StudyBlockControllerTest {
 
         when(studyBlockService.updateStudyBlock(eq(1L), any(UpdateStudyBlockRequest.class))).thenReturn(response);
 
-        mockMvc.perform(put("/study-blocks/{studyBlockId}", 1L)
+        mockMvc.perform(put("/study-blocks/{studyBlockId}", 1L).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -354,7 +375,7 @@ class StudyBlockControllerTest {
         invalidRequest.setTitle("");
         invalidRequest.setActive(true);
 
-        mockMvc.perform(put("/study-blocks/{studyBlockId}", 1L)
+        mockMvc.perform(put("/study-blocks/{studyBlockId}", 1L).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(invalidRequest)))
@@ -378,7 +399,7 @@ class StudyBlockControllerTest {
         when(studyBlockService.updateStudyBlock(eq(99L), any(UpdateStudyBlockRequest.class)))
                 .thenThrow(new StudyBlockNotFoundException("Study block with id 99 was not found"));
 
-        mockMvc.perform(put("/study-blocks/{studyBlockId}", 99L)
+        mockMvc.perform(put("/study-blocks/{studyBlockId}", 99L).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -395,7 +416,7 @@ class StudyBlockControllerTest {
     @Test
     void deleteStudyBlockShouldReturn204WhenStudyBlockExistsAndIsEmpty() throws Exception {
 
-        mockMvc.perform(delete("/study-blocks/{studyBlockId}", 1L))
+        mockMvc.perform(delete("/study-blocks/{studyBlockId}", 1L).with(csrf()))
                 .andExpect(status().isNoContent())
                 .andExpect(content().string(""));
 
@@ -408,7 +429,7 @@ class StudyBlockControllerTest {
         doThrow(new StudyBlockNotFoundException("Study block with id 99 was not found"))
                 .when(studyBlockService).deleteStudyBlock(99L);
 
-        mockMvc.perform(delete("/study-blocks/{studyBlockId}", 99L))
+        mockMvc.perform(delete("/study-blocks/{studyBlockId}", 99L).with(csrf()))
                 .andExpect(status().isNotFound())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.status").value(404))
@@ -425,7 +446,7 @@ class StudyBlockControllerTest {
         doThrow(new StudyBlockNotEmptyException("Study block must be empty to delete"))
                 .when(studyBlockService).deleteStudyBlock(99L);
 
-        mockMvc.perform(delete("/study-blocks/{studyBlockId}", 99L))
+        mockMvc.perform(delete("/study-blocks/{studyBlockId}", 99L).with(csrf()))
                 .andExpect(status().isConflict())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.status").value(409))
@@ -434,5 +455,95 @@ class StudyBlockControllerTest {
                 .andExpect(jsonPath("$.path").value("/study-blocks/99"));
 
         verify(studyBlockService).deleteStudyBlock(99L);
+    }
+
+    @Test
+    void getStudyBlocksShouldReturn401WhenAnonymous() throws Exception {
+        assertSecurityError(
+                get("/study-blocks").with(anonymous()),
+                401, "Unauthorized", "Authentication required", "/study-blocks");
+    }
+
+    @Test
+    void getStudyBlockByIdShouldReturn401WhenAnonymous() throws Exception {
+        assertSecurityError(
+                get("/study-blocks/1").with(anonymous()),
+                401, "Unauthorized", "Authentication required", "/study-blocks/1");
+    }
+
+    @Test
+    void createStudyBlockShouldReturn401WhenAnonymous() throws Exception {
+        assertSecurityError(
+                post("/study-blocks")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Title\",\"active\":false}").with(anonymous()).with(csrf()),
+                401, "Unauthorized", "Authentication required", "/study-blocks");
+    }
+
+    @Test
+    void createStudyBlockShouldReturn403WhenCsrfIsMissing() throws Exception {
+        assertSecurityError(
+                post("/study-blocks")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Title\",\"active\":false}"),
+                403, "Forbidden", "Access denied", "/study-blocks");
+    }
+
+    @Test
+    void createStudyBlockShouldReturn403WhenCsrfIsInvalid() throws Exception {
+        assertSecurityError(
+                post("/study-blocks")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Title\",\"active\":false}").with(csrf().useInvalidToken()),
+                403, "Forbidden", "Access denied", "/study-blocks");
+    }
+
+    @Test
+    void updateStudyBlockShouldReturn401WhenAnonymous() throws Exception {
+        assertSecurityError(
+                put("/study-blocks/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Updated Title\",\"active\":true}").with(anonymous()).with(csrf()),
+                401, "Unauthorized", "Authentication required", "/study-blocks/1");
+    }
+
+    @Test
+    void updateStudyBlockShouldReturn403WhenCsrfIsMissing() throws Exception {
+        assertSecurityError(
+                put("/study-blocks/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Updated Title\",\"active\":true}"),
+                403, "Forbidden", "Access denied", "/study-blocks/1");
+    }
+
+    @Test
+    void deleteStudyBlockShouldReturn401WhenAnonymous() throws Exception {
+        assertSecurityError(
+                delete("/study-blocks/1").with(anonymous()).with(csrf()),
+                401, "Unauthorized", "Authentication required", "/study-blocks/1");
+    }
+
+    @Test
+    void deleteStudyBlockShouldReturn403WhenCsrfIsMissing() throws Exception {
+        assertSecurityError(
+                delete("/study-blocks/1"),
+                403, "Forbidden", "Access denied", "/study-blocks/1");
+    }
+
+    private void assertSecurityError(
+            MockHttpServletRequestBuilder request,
+            int expectedStatus,
+            String expectedError,
+            String expectedMessage,
+            String expectedPath) throws Exception {
+        mockMvc.perform(request)
+                .andExpect(status().is(expectedStatus))
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(expectedStatus))
+                .andExpect(jsonPath("$.error").value(expectedError))
+                .andExpect(jsonPath("$.message").value(expectedMessage))
+                .andExpect(jsonPath("$.path").value(expectedPath));
+
+        verifyNoInteractions(studyBlockService, userDetailsService);
     }
 }
